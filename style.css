@@ -1,0 +1,461 @@
+/* =========================
+   TYLAITPK — BASE
+========================= */
+
+:root {
+  --bg: #0b0d10;
+  --bg-soft: #111419;
+  --card: #15191f;
+
+  --text: #f3f4f6;
+  --muted: #969da8;
+
+  --accent: #ff4d3d;
+  --border: #252a32;
+
+  --max-width: 1180px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.container {
+  width: min(90%, var(--max-width));
+  margin: 0 auto;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+
+  background: rgba(11, 13, 16, 0.88);
+  backdrop-filter: blur(14px);
+
+  border-bottom: 1px solid var(--border);
+
+  z-index: 100;
+}
+
+.nav {
+  height: 74px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.logo span {
+  color: var(--accent);
+}
+
+nav {
+  display: flex;
+  gap: 32px;
+}
+
+nav a {
+  color: var(--muted);
+
+  font-size: 0.9rem;
+  font-weight: 500;
+
+  transition: color 0.2s ease;
+}
+
+nav a:hover {
+  color: var(--text);
+}
+
+
+/* =========================
+   HERO
+========================= */
+
+.hero {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+
+  padding-top: 74px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-content {
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
+
+.eyebrow {
+  margin-bottom: 28px;
+
+  color: var(--accent);
+
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  letter-spacing: 0.18em;
+}
+
+.hero h1 {
+  max-width: 900px;
+
+  font-size: clamp(3rem, 8vw, 7rem);
+  line-height: 0.95;
+
+  letter-spacing: -0.065em;
+}
+
+.hero h1 span {
+  color: var(--muted);
+}
+
+.hero-text {
+  max-width: 620px;
+
+  margin-top: 36px;
+
+  color: var(--muted);
+
+  font-size: 1.15rem;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+
+  margin-top: 40px;
+}
+
+
+/* =========================
+   BUTTONS
+========================= */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 50px;
+
+  padding: 0 24px;
+
+  border: 1px solid var(--border);
+
+  font-size: 0.9rem;
+  font-weight: 600;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.button:hover {
+  transform: translateY(-2px);
+}
+
+.button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.button.secondary:hover {
+  background: var(--bg-soft);
+  border-color: #414854;
+}
+
+
+/* =========================
+   SECTIONS
+========================= */
+
+.section {
+  padding: 130px 0;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.section-label {
+  margin-bottom: 22px;
+
+  color: var(--accent);
+
+  font-size: 0.72rem;
+  font-weight: 700;
+
+  letter-spacing: 0.16em;
+}
+
+.section h2 {
+  margin-bottom: 30px;
+
+  font-size: clamp(2.2rem, 5vw, 4.2rem);
+  line-height: 1;
+
+  letter-spacing: -0.05em;
+}
+
+.section-text {
+  max-width: 680px;
+
+  color: var(--muted);
+
+  font-size: 1.1rem;
+}
+
+
+/* =========================
+   SERVICES
+========================= */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 1px;
+
+  margin-top: 60px;
+
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.card {
+  min-height: 300px;
+
+  padding: 32px;
+
+  background: var(--bg);
+
+  transition: background 0.2s ease;
+}
+
+.card:hover {
+  background: var(--bg-soft);
+}
+
+.card > span {
+  color: var(--accent);
+
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.card h3 {
+  margin-top: 80px;
+  margin-bottom: 14px;
+
+  font-size: 1.4rem;
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+
+/* =========================
+   PROJECT
+========================= */
+
+.project {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  margin-top: 60px;
+  padding: 36px 0;
+
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.project-type {
+  margin-bottom: 10px;
+
+  color: var(--accent);
+
+  font-size: 0.7rem;
+  font-weight: 700;
+
+  letter-spacing: 0.15em;
+}
+
+.project h3 {
+  margin-bottom: 10px;
+
+  font-size: 1.8rem;
+}
+
+.project p:not(.project-type) {
+  max-width: 500px;
+
+  color: var(--muted);
+}
+
+.project-number {
+  color: #2e343d;
+
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 800;
+
+  line-height: 0.8;
+
+  letter-spacing: -0.08em;
+}
+
+
+/* =========================
+   CONTACT
+========================= */
+
+.contact {
+  min-height: 70vh;
+
+  display: flex;
+  align-items: center;
+}
+
+.contact-link {
+  display: inline-block;
+
+  margin-top: 40px;
+
+  padding-bottom: 5px;
+
+  border-bottom: 1px solid var(--accent);
+
+  font-size: clamp(1.2rem, 4vw, 2rem);
+
+  transition: color 0.2s ease;
+}
+
+.contact-link:hover {
+  color: var(--accent);
+}
+
+
+/* =========================
+   FOOTER
+========================= */
+
+footer {
+  padding: 32px 0;
+
+  color: var(--muted);
+
+  font-size: 0.8rem;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+
+  gap: 20px;
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 760px) {
+
+  .nav {
+    height: 64px;
+  }
+
+  nav {
+    gap: 16px;
+  }
+
+  nav a {
+    font-size: 0.75rem;
+  }
+
+  nav a:nth-child(2),
+  nav a:nth-child(3) {
+    display: none;
+  }
+
+  .hero {
+    padding-top: 64px;
+  }
+
+  .hero-content {
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+
+  .hero h1 {
+    font-size: clamp(3rem, 15vw, 5rem);
+  }
+
+  .section {
+    padding: 90px 0;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    min-height: auto;
+  }
+
+  .card h3 {
+    margin-top: 45px;
+  }
+
+  .project {
+    align-items: flex-start;
+    gap: 30px;
+  }
+
+  .footer-content {
+    flex-direction: column;
+  }
+}
