@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="lt">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Darbo valandos</title>
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+</head>
+
+
+<body>
+
+    <main class="app">
+
+
+        <!-- ==========================
+             ANTRAŠTĖ
+        =========================== -->
+
+        <header class="header">
+
+            <div>
+
+                <div class="app-title">
+                    DARBO VALANDOS
+                </div>
+
+                <div class="greeting">
+                    Demonstracinė versija
+                </div>
+
+            </div>
+
+            <div
+                class="clock"
+                id="clock"
+            >
+                00:00
+            </div>
+
+        </header>
+
+
+        <!-- ==========================
+             PROJEKTAS
+        =========================== -->
+
+        <section class="card">
+
+            <label for="project">
+                Projektas
+            </label>
+
+            <select id="project">
+
+                <option value="">
+                    Pasirinkite projektą
+                </option>
+
+                <option value="P-001">
+                    P-001 – Kelio rekonstrukcija
+                </option>
+
+                <option value="P-002">
+                    P-002 – Objekto geodeziniai matavimai
+                </option>
+
+                <option value="P-003">
+                    P-003 – Statybos darbai
+                </option>
+
+            </select>
+
+        </section>
+
+
+        <!-- ==========================
+             ŠIANDIEN
+        =========================== -->
+
+        <section class="status-card">
+
+            <div class="status-label">
+                ŠIANDIEN
+            </div>
+
+            <div
+                class="status"
+                id="status"
+            >
+                Darbas nepradėtas
+            </div>
+
+            <div
+                class="work-time"
+                id="workTime"
+            >
+                0:00
+            </div>
+
+        </section>
+
+
+        <!-- ==========================
+             DARBO ĮRAŠAS
+        =========================== -->
+
+        <section
+            class="finish-card"
+            id="finishCard"
+            style="display: none;"
+        >
+
+            <div class="status-label">
+                DARBO ĮRAŠAS
+            </div>
+
+            <h2>
+                Darbas baigtas
+            </h2>
+
+            <div
+                id="finishedTime"
+                class="finished-time"
+            >
+                00:00 – 00:00
+            </div>
+
+
+            <!-- ======================
+                 DARBŲ PAVADINIMAS
+            ======================= -->
+
+            <label for="workType">
+                Darbų pavadinimas
+            </label>
+
+            <select id="workType">
+
+                <option value="">
+                    Pasirinkite darbų pavadinimą
+                </option>
+
+                <option value="Geodeziniai matavimai">
+                    Geodeziniai matavimai
+                </option>
+
+                <option value="Kontrolinė geodezinė nuotrauka">
+                    Kontrolinė geodezinė nuotrauka
+                </option>
+
+                <option value="Ašių nužymėjimas">
+                    Ašių nužymėjimas
+                </option>
+
+                <option value="Aukščių nužymėjimas">
+                    Aukščių nužymėjimas
+                </option>
+
+                <option value="Statinių nužymėjimas">
+                    Statinių nužymėjimas
+                </option>
+
+                <option value="Kadastriniai matavimai">
+                    Kadastriniai matavimai
+                </option>
+
+                <option value="Kita">
+                    Kita
+                </option>
+
+            </select>
+
+
+            <!-- ======================
+                 KITA
+            ======================= -->
+
+            <div
+                id="customWorkTypeContainer"
+                style="display: none;"
+            >
+
+                <label for="customWorkType">
+                    Įrašykite darbą
+                </label>
+
+                <input
+                    type="text"
+                    id="customWorkType"
+                    placeholder="Darbų pavadinimas"
+                >
+
+            </div>
+
+
+            <!-- ======================
+                 PATVIRTINTI
+            ======================= -->
+
+            <button
+                id="saveEntryButton"
+                class="save-button"
+            >
+                ✓ PATVIRTINTI DARBO ĮRAŠĄ
+            </button>
+
+        </section>
+
+
+        <!-- ==========================
+             PRADĖTI / BAIGTI DARBĄ
+        =========================== -->
+
+        <button
+            id="startButton"
+            class="start-button"
+        >
+            ▶ PRADĖTI DARBĄ
+        </button>
+
+
+        <!-- ==========================
+             PIETŪS
+        =========================== -->
+
+        <button
+            type="button"
+            id="lunchButton"
+            class="lunch-button"
+            style="display: none;"
+        >
+            🍽️ PIETŪS: 45 MIN.
+        </button>
+
+
+        <input
+            type="hidden"
+            id="lunchValue"
+            value="45"
+        >
+
+
+        <div
+            id="lunchOptions"
+            class="lunch-options"
+            style="display: none;"
+        >
+
+            <button
+                type="button"
+                class="lunch-option"
+                data-minutes="0"
+            >
+                Be pietų
+            </button>
+
+
+            <button
+                type="button"
+                class="lunch-option"
+                data-minutes="15"
+            >
+                Pietūs: 15 min.
+            </button>
+
+
+            <button
+                type="button"
+                class="lunch-option"
+                data-minutes="30"
+            >
+                Pietūs: 30 min.
+            </button>
+
+
+            <button
+                type="button"
+                class="lunch-option"
+                data-minutes="45"
+            >
+                Pietūs: 45 min.
+            </button>
+
+        </div>
+
+
+        <!-- ==========================
+             APATINIS MENIU
+        =========================== -->
+
+        <section class="bottom-menu">
+
+            <button>
+                📋 Istorija
+            </button>
+
+            <button>
+                📊 Ataskaita
+            </button>
+
+            <button>
+                ⚙️ Nustatymai
+            </button>
+
+        </section>
+
+
+    </main>
+
+
+    <script src="app.js"></script>
+
+</body>
+
+</html>
