@@ -38,6 +38,27 @@
     <div class="actions"><button class="primary" id="start">Pradėti</button><button class="secondary hidden" id="pause">Pauzė</button><button class="danger hidden" id="reset">Iš naujo</button></div>
     <div class="live" role="status" aria-live="polite" id="announce"></div>
   </section>
+  <section class="card" aria-label="Šiandienos įrašai">
+    <h2>Šiandien</h2><div class="slots"><div class="slot">☀️ <strong>Rytas</strong><span class="status" id="morning">Dar nepažymėta</span></div><div class="slot">🌙 <strong>Vakaras</strong><span class="status" id="evening">Dar nepažymėta</span></div></div>
+    <p class="caption">Baigus laikmatį, pasirinksi, kurį valymą įrašyti. Praleistą valymą gali pažymėti ir ranka.</p>
+    <div class="actions" style="margin-top:15px"><button class="secondary" id="addMorning">+ Rytas</button><button class="secondary" id="addEvening">+ Vakaras</button></div>
+    <div id="completion" class="hidden" style="margin-top:15px"><p id="completionText" style="margin:0 0 10px">Puiku! Kurį valymą įrašyti?</p><div class="actions"><button class="primary" id="saveMorning">Rytas</button><button class="primary" id="saveEvening">Vakaras</button></div></div>
+  </section>
+  <section class="card" aria-label="Pastarosios septynios dienos"><h2>Pastarosios 7 dienos</h2><div class="week" id="week"></div><p class="caption">Kiekvienos dienos žymos: 0, 1 arba 2 valymai.</p></section>
+  <details class="card collapsible" aria-label="Mėnesio ataskaita">
+    <summary><h2>Mėnesio ataskaita</h2><span class="pill" id="reportPercent">0 %</span><span class="chevron" aria-hidden="true">⌄</span></summary>
+    <div class="collapse-body">
+    <label for="reportMonth" class="caption" style="display:block;margin:16px 0 7px">Pasirink mėnesį</label>
+    <input class="field" type="month" id="reportMonth">
+    <div class="stats">
+      <div class="stat"><b id="reportCleanings">0</b><span>valymų</span></div>
+      <div class="stat"><b id="reportPerfectDays">0</b><span>pilnų dienų</span></div>
+      <div class="stat"><b id="reportStreak">0</b><span>dienų serija</span></div>
+      <div class="stat"><b id="reportMissed">0</b><span>trūkstamų valymų</span></div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Data</th><th>Rytas</th><th>Vakaras</th><th>Iš viso</th></tr></thead><tbody id="reportRows"></tbody></table></div>
+    </div>
+  </details>
   <details class="card collapsible" aria-label="Garso signalo nustatymai">
     <summary><h2>Garso signalas</h2><span class="chevron" aria-hidden="true">⌄</span></summary>
     <div class="collapse-body">
@@ -62,27 +83,6 @@
     <label class="check-row"><input type="checkbox" id="signalVibration"> <span>Vibruoti kartu su signalu</span></label>
     <button class="secondary preview-signal" id="testSignal">Išbandyti signalą</button>
     <p class="caption">Galutinį garsumą taip pat lemia telefono medijos garsumo nustatymas.</p>
-    </div>
-  </details>
-  <section class="card" aria-label="Šiandienos įrašai">
-    <h2>Šiandien</h2><div class="slots"><div class="slot">☀️ <strong>Rytas</strong><span class="status" id="morning">Dar nepažymėta</span></div><div class="slot">🌙 <strong>Vakaras</strong><span class="status" id="evening">Dar nepažymėta</span></div></div>
-    <p class="caption">Baigus laikmatį, pasirinksi, kurį valymą įrašyti. Praleistą valymą gali pažymėti ir ranka.</p>
-    <div class="actions" style="margin-top:15px"><button class="secondary" id="addMorning">+ Rytas</button><button class="secondary" id="addEvening">+ Vakaras</button></div>
-    <div id="completion" class="hidden" style="margin-top:15px"><p id="completionText" style="margin:0 0 10px">Puiku! Kurį valymą įrašyti?</p><div class="actions"><button class="primary" id="saveMorning">Rytas</button><button class="primary" id="saveEvening">Vakaras</button></div></div>
-  </section>
-  <section class="card" aria-label="Pastarosios septynios dienos"><h2>Pastarosios 7 dienos</h2><div class="week" id="week"></div><p class="caption">Kiekvienos dienos žymos: 0, 1 arba 2 valymai.</p></section>
-  <details class="card collapsible" aria-label="Mėnesio ataskaita">
-    <summary><h2>Mėnesio ataskaita</h2><span class="pill" id="reportPercent">0 %</span><span class="chevron" aria-hidden="true">⌄</span></summary>
-    <div class="collapse-body">
-    <label for="reportMonth" class="caption" style="display:block;margin:16px 0 7px">Pasirink mėnesį</label>
-    <input class="field" type="month" id="reportMonth">
-    <div class="stats">
-      <div class="stat"><b id="reportCleanings">0</b><span>valymų</span></div>
-      <div class="stat"><b id="reportPerfectDays">0</b><span>pilnų dienų</span></div>
-      <div class="stat"><b id="reportStreak">0</b><span>dienų serija</span></div>
-      <div class="stat"><b id="reportMissed">0</b><span>trūkstamų valymų</span></div>
-    </div>
-    <div class="table-wrap"><table><thead><tr><th>Data</th><th>Rytas</th><th>Vakaras</th><th>Iš viso</th></tr></thead><tbody id="reportRows"></tbody></table></div>
     </div>
   </details>
   <details class="card collapsible" aria-label="Duomenų eksportas ir atkūrimas">
