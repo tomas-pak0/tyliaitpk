@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="lt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0b0d">
+  <meta name="description" content="Dviejų minučių dantų valymo laikmatis ir kasdienės burnos priežiūros įpročio sekimas.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Šypsena">
+  <link rel="icon" href="../../icons/sypsena.svg" type="image/svg+xml">
+  <title>Šypsena — dantų valymo laikmatis</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f7f7f7;background:#0b0b0d;color-scheme:dark}
+    *{box-sizing:border-box}body{margin:0;min-height:100svh;background:radial-gradient(circle at 50% 0,#252528,#0b0b0d 58%);}
+    main{max-width:540px;margin:auto;padding-top:calc(16px + max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),28px));padding-right:calc(20px + var(--safe-area-inset-right,env(safe-area-inset-right,0px)));padding-bottom:calc(20px + max(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)),32px));padding-left:calc(20px + var(--safe-area-inset-left,env(safe-area-inset-left,0px)))}.eyebrow{font-size:.76rem;letter-spacing:.19em;text-transform:uppercase;color:#f0525e;font-weight:800}h1{font-size:clamp(2.4rem,9vw,3.5rem);line-height:1;margin:8px 0 12px;letter-spacing:-.055em}h2{font-size:1.1rem;margin:0 0 15px}p{line-height:1.5}.lead{color:#bcbcc1;margin:0 0 26px}.card{background:#19191c;border:1px solid #3b3b40;border-radius:24px;padding:22px;margin:18px 0;box-shadow:0 14px 40px #00000055}
+    .topline{display:flex;justify-content:space-between;gap:12px;align-items:center}.pill{background:#422126;color:#ffc5c9;border-radius:100px;padding:7px 12px;font-size:.8rem;font-weight:700}.muted{color:#b6b6bd}.timer{width:min(70vw,276px);aspect-ratio:1;border-radius:50%;margin:24px auto 12px;display:grid;place-items:center;background:conic-gradient(#ed3948 var(--progress,0%),#38383e 0);position:relative}.timer:before{content:"";position:absolute;inset:12px;background:#19191c;border-radius:50%}.timer-content{position:relative;text-align:center}.digits{font-size:4.2rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.06em}.timer-label{color:#e2e2e5;font-size:.84rem}.phase{text-align:center;font-size:1.13rem;font-weight:750;min-height:30px;margin:10px 0 4px}.hint{text-align:center;color:#bcbcc1;font-size:.88rem;min-height:39px;margin:0 0 12px}.actions{display:flex;gap:10px}.actions button{flex:1}button{border:0;border-radius:14px;padding:15px 16px;font:inherit;font-weight:750;cursor:pointer;min-height:50px}button:focus-visible{outline:3px solid #ffffff;outline-offset:3px}.primary{background:#ed3948;color:#ffffff}.secondary{background:#333338;color:#f7f7f7}.danger{background:transparent;color:#ffb5bc;border:1px solid #a94b55}.hidden{display:none!important}.slots{display:grid;grid-template-columns:1fr 1fr;gap:10px}.slot{background:#26262a;border:1px solid #44444a;border-radius:18px;padding:15px}.slot strong{display:block;margin:3px 0}.status{font-size:.83rem;color:#b6b6bd}.status.done{color:#ff8c96}.week{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}.day{text-align:center;background:#26262a;border-radius:12px;padding:8px 2px;font-size:.75rem;color:#c4c4ca}.day b{display:block;font-size:1.1rem;margin:5px 0;color:#ffffff}.day.today{outline:1px solid #ed3948}.caption{font-size:.8rem;color:#b6b6bd;margin:14px 0 0}.footer{font-size:.82rem;color:#b4b4bb}.footer a{color:#ff8791}.live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:14px 0}.stat{background:#26262a;border:1px solid #44444a;border-radius:18px;padding:15px}.stat b{display:block;font-size:1.65rem;line-height:1.1;margin-bottom:4px}.stat span{color:#b6b6bd;font-size:.78rem}.field{width:100%;min-height:48px;border:1px solid #4a4a50;border-radius:14px;background:#26262a;color:#fff;padding:0 14px;font:inherit;color-scheme:dark}.table-wrap{overflow:auto;margin-top:14px;border:1px solid #3b3b40;border-radius:14px}table{width:100%;border-collapse:collapse;min-width:410px;font-size:.83rem}th,td{padding:11px 12px;text-align:left;border-bottom:1px solid #34343a}th{color:#b6b6bd;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}tr:last-child td{border-bottom:0}.mark{color:#ff7b86;font-weight:800}.empty{text-align:center;color:#b6b6bd;padding:22px}.stack{display:grid;gap:10px}.file-input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.install-card{display:flex;align-items:center;gap:14px;background:#24191c;border-color:#663039}.install-card>div{flex:1}.install-card p{margin:4px 0 0;color:#c8c0c2;font-size:.83rem}.install-card button{flex:0 0 auto}.connection{display:inline-flex;align-items:center;gap:6px;margin-top:8px;color:#a7a7ad;font-size:.76rem}.connection:before{content:"";width:7px;height:7px;border-radius:50%;background:#6fda98}.connection.offline:before{background:#ed3948}.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.settings-grid label{display:block;color:#b6b6bd;font-size:.8rem}.settings-grid .field{margin-top:7px}.preview-signal{width:100%;margin-top:12px}.card.collapsible{padding:0}.collapsible>summary{display:flex;align-items:center;gap:12px;list-style:none;cursor:pointer;padding:22px}.collapsible>summary::-webkit-details-marker{display:none}.collapsible>summary h2{flex:1;margin:0}.collapsible>summary .pill{margin-left:auto}.collapse-body{padding:0 22px 22px}.chevron{color:#ff8791;font-size:1.35rem;line-height:1;transition:transform .2s}.collapsible[open] .chevron{transform:rotate(180deg)}.check-row{display:flex;align-items:center;gap:11px;margin-top:12px;padding:13px 14px;background:#26262a;border:1px solid #44444a;border-radius:14px;color:#f7f7f7;font-size:.9rem;cursor:pointer}.check-row input{width:20px;height:20px;accent-color:#ed3948}
+    @media(max-width:365px){.digits{font-size:3.4rem}.card{padding:17px}.card.collapsible{padding:0}.collapsible>summary{padding:17px}.collapse-body{padding:0 17px 17px}}
+    @media(prefers-reduced-motion:no-preference){button{transition:transform .15s,filter .15s}button:active{transform:scale(.97)}button:hover{filter:brightness(1.08)}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Kasdienė rutina</div>
+  <h1>Šypsena<span style="color:#ed3948">.</span></h1>
+  <p class="lead">Dvi minutės sau. Ryte ir vakare.</p>
+  <section class="card install-card hidden" id="installCard" aria-label="Programėlės diegimas">
+    <div><strong>Įsidiek „Šypseną“</strong><p>Naudok kaip įprastą programėlę ir be interneto.</p></div>
+    <button class="primary" id="installApp">Įdiegti</button>
+  </section>
+  <div class="topline"><div class="connection" id="connectionStatus">Prisijungta · paruošta darbui be interneto</div><span class="pill">v1.2</span></div>
+  <section class="card" aria-label="Valymo laikmatis">
+    <div class="topline"><span class="muted">Dantų valymas</span><span class="pill">2:00 · 4 etapai</span></div>
+    <div class="timer" id="ring"><div class="timer-content"><div class="digits" id="clock">02:00</div><div class="timer-label" id="counter">Pasiruošk valyti</div></div></div>
+    <div class="phase" id="phase">Pradėkime?</div>
+    <p class="hint" id="hint">Kas 30 sekundžių pereik prie kitos burnos dalies.</p>
+    <div class="actions"><button class="primary" id="start">Pradėti</button><button class="secondary hidden" id="pause">Pauzė</button><button class="danger hidden" id="reset">Iš naujo</button></div>
+    <div class="live" role="status" aria-live="polite" id="announce"></div>
+  </section>
+  <details class="card collapsible" aria-label="Garso signalo nustatymai">
+    <summary><h2>Garso signalas</h2><span class="chevron" aria-hidden="true">⌄</span></summary>
+    <div class="collapse-body">
+    <p class="caption" style="margin-top:0">Pasirink, koks signalas primins keisti valymo sritį kas 30 sekundžių.</p>
+    <div class="settings-grid" style="margin-top:15px">
+      <label>Signalo tipas
+        <select class="field" id="signalType">
+          <option value="double">Dvigubas ryškus</option>
+          <option value="beep">Trumpas aukštas</option>
+          <option value="chime">Švelnus varpelis</option>
+          <option value="off">Be garso · tik vibracija</option>
+        </select>
+      </label>
+      <label>Garsumas
+        <select class="field" id="signalVolume">
+          <option value="low">Tylus</option>
+          <option value="medium">Vidutinis</option>
+          <option value="high">Garsus</option>
+        </select>
+      </label>
+    </div>
+    <label class="check-row"><input type="checkbox" id="signalVibration"> <span>Vibruoti kartu su signalu</span></label>
+    <button class="secondary preview-signal" id="testSignal">Išbandyti signalą</button>
+    <p class="caption">Galutinį garsumą taip pat lemia telefono medijos garsumo nustatymas.</p>
+    </div>
+  </details>
+  <section class="card" aria-label="Šiandienos įrašai">
+    <h2>Šiandien</h2><div class="slots"><div class="slot">☀️ <strong>Rytas</strong><span class="status" id="morning">Dar nepažymėta</span></div><div class="slot">🌙 <strong>Vakaras</strong><span class="status" id="evening">Dar nepažymėta</span></div></div>
+    <p class="caption">Baigus laikmatį, pasirinksi, kurį valymą įrašyti. Praleistą valymą gali pažymėti ir ranka.</p>
+    <div class="actions" style="margin-top:15px"><button class="secondary" id="addMorning">+ Rytas</button><button class="secondary" id="addEvening">+ Vakaras</button></div>
+    <div id="completion" class="hidden" style="margin-top:15px"><p id="completionText" style="margin:0 0 10px">Puiku! Kurį valymą įrašyti?</p><div class="actions"><button class="primary" id="saveMorning">Rytas</button><button class="primary" id="saveEvening">Vakaras</button></div></div>
+  </section>
+  <section class="card" aria-label="Pastarosios septynios dienos"><h2>Pastarosios 7 dienos</h2><div class="week" id="week"></div><p class="caption">Kiekvienos dienos žymos: 0, 1 arba 2 valymai.</p></section>
+  <details class="card collapsible" aria-label="Mėnesio ataskaita">
+    <summary><h2>Mėnesio ataskaita</h2><span class="pill" id="reportPercent">0 %</span><span class="chevron" aria-hidden="true">⌄</span></summary>
+    <div class="collapse-body">
+    <label for="reportMonth" class="caption" style="display:block;margin:16px 0 7px">Pasirink mėnesį</label>
+    <input class="field" type="month" id="reportMonth">
+    <div class="stats">
+      <div class="stat"><b id="reportCleanings">0</b><span>valymų</span></div>
+      <div class="stat"><b id="reportPerfectDays">0</b><span>pilnų dienų</span></div>
+      <div class="stat"><b id="reportStreak">0</b><span>dienų serija</span></div>
+      <div class="stat"><b id="reportMissed">0</b><span>trūkstamų valymų</span></div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Data</th><th>Rytas</th><th>Vakaras</th><th>Iš viso</th></tr></thead><tbody id="reportRows"></tbody></table></div>
+    </div>
+  </details>
+  <details class="card collapsible" aria-label="Duomenų eksportas ir atkūrimas">
+    <summary><h2>Duomenys</h2><span class="chevron" aria-hidden="true">⌄</span></summary>
+    <div class="collapse-body">
+    <p class="caption" style="margin-top:0">PDF tinka gražiai ataskaitai, CSV – „Excel“, o JSON – visai atsarginei programėlės kopijai.</p>
+    <div class="stack" style="margin-top:15px">
+      <button class="primary" id="exportPdf">Eksportuoti mėnesį į PDF</button>
+      <button class="secondary" id="exportCsv">Eksportuoti mėnesį į CSV</button>
+      <button class="secondary" id="exportJson">Atsisiųsti atsarginę kopiją</button>
+      <label class="secondary" for="importJson" style="display:grid;place-items:center;border-radius:14px;min-height:50px;font-weight:750;cursor:pointer">Atkurti iš JSON failo</label>
+      <input class="file-input" type="file" id="importJson" accept="application/json,.json">
+    </div>
+    </div>
+  </details>
+  <p class="footer">Duomenys saugomi tik šioje naršyklėje; išvalius naršyklės duomenis, įrašai dings. Rekomenduojama valyti dantis fluorido turinčia pasta apie 2 minutes du kartus per dieną. <a href="https://www.nhs.uk/live-well/healthy-teeth-and-gums/how-to-keep-your-teeth-clean/" target="_blank" rel="noopener noreferrer">NHS gairės</a>.</p>
+</main>
+<script>
+(() => {
+  'use strict';
+  const DURATION=120, STEP=30, STORAGE='sypsena-brushing-v1', SOUND_STORAGE='sypsena-sound-v1';
+  const stages=['Viršutiniai dantys · dešinė','Viršutiniai dantys · kairė','Apatiniai dantys · kairė','Apatiniai dantys · dešinė'];
+  const $=id=>document.getElementById(id);
+  let records=load(), sound=loadSoundSettings(), remaining=DURATION, mode='idle', endAt=0, ticker=null, audio=null;
+  function localDate(date=new Date()){return [date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-')}
+  function validRecords(value){return value&&typeof value==='object'&&!Array.isArray(value)&&Object.entries(value).every(([date,day])=>/^\d{4}-\d{2}-\d{2}$/.test(date)&&day&&typeof day==='object'&&!Array.isArray(day))}
+  function load(){try{const value=JSON.parse(localStorage.getItem(STORAGE));return validRecords(value)?value:{}}catch{return {}}}
+  function persist(){try{localStorage.setItem(STORAGE,JSON.stringify(records))}catch{ $('announce').textContent='Nepavyko išsaugoti įrašo šiame įrenginyje.' }}
+  function loadSoundSettings(){try{const value=JSON.parse(localStorage.getItem(SOUND_STORAGE));return {type:['double','beep','chime','off'].includes(value?.type)?value.type:'double',volume:['low','medium','high'].includes(value?.volume)?value.volume:'high',vibration:value?.vibration!==false}}catch{return {type:'double',volume:'high',vibration:true}}}
+  function persistSoundSettings(){try{localStorage.setItem(SOUND_STORAGE,JSON.stringify(sound))}catch{}}
+  function ensureAudio(){try{audio ||= new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();return audio}catch{return null}}
+  function playTone(context,start,frequency,duration,wave,level){const osc=context.createOscillator(),gain=context.createGain();osc.type=wave;osc.frequency.setValueAtTime(frequency,start);gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(level,start+.015);gain.gain.setValueAtTime(level,start+duration*.55);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);osc.connect(gain).connect(context.destination);osc.start(start);osc.stop(start+duration+.02)}
+  function playSignal(){const context=ensureAudio(),level={low:.14,medium:.28,high:.46}[sound.volume]||.46,patterns={double:[[0,980,.16,'triangle'],[.22,1320,.19,'triangle']],beep:[[0,1450,.25,'square']],chime:[[0,880,.34,'sine'],[.16,1320,.42,'sine']]};if(context&&sound.type!=='off'){const start=context.currentTime+.02;for(const [delay,frequency,duration,wave] of patterns[sound.type]||patterns.double)playTone(context,start+delay,frequency,duration,wave,level)}if(sound.vibration)try{navigator.vibrate?.(sound.type==='double'?[120,80,120]:160)}catch{}}
+  function renderTimer(){const elapsed=DURATION-remaining; $('clock').textContent=`${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;$('ring').style.setProperty('--progress',`${(elapsed/DURATION)*100}%`);
+    if(mode==='complete'){$('phase').textContent='Valymas baigtas!';$('counter').textContent='Puikiai padirbėta';$('hint').textContent='Pasirink valymą ir išsaugok įrašą.'}
+    else if(mode==='idle'){$('phase').textContent='Pradėkime?';$('counter').textContent='Pasiruošk valyti';$('hint').textContent='Kas 30 sekundžių pereik prie kitos burnos dalies.'}
+    else{const index=Math.min(3,Math.floor(elapsed/STEP));$('phase').textContent=stages[index];$('counter').textContent=`${index+1} / 4 etapas`;$('hint').textContent=mode==='paused'?'Laikmatis sustabdytas.':'Švelniai valyk visas dantų puses.'}
+    $('start').classList.toggle('hidden',mode==='running'||mode==='complete');$('start').textContent=mode==='paused'?'Tęsti':'Pradėti';$('pause').classList.toggle('hidden',mode!=='running');$('reset').classList.toggle('hidden',mode==='idle');$('completion').classList.toggle('hidden',mode!=='complete');}
+  function stopTicker(){if(ticker){clearInterval(ticker);ticker=null}}
+  function tick(){const oldRemaining=remaining;remaining=Math.max(0,Math.ceil((endAt-Date.now())/1000));if(remaining===0){stopTicker();mode='complete';playSignal();$('announce').textContent='Dvi minutės baigėsi. Pasirinkite rytą arba vakarą.'}else if(Math.floor((DURATION-remaining)/STEP)>Math.floor((DURATION-oldRemaining)/STEP)){playSignal();$('announce').textContent=stages[Math.min(3,Math.floor((DURATION-remaining)/STEP))]}renderTimer()}
+  function start(){ensureAudio();if(mode==='idle')remaining=DURATION;mode='running';endAt=Date.now()+remaining*1000;tick();ticker=setInterval(tick,250)}
+  function reset(){stopTicker();remaining=DURATION;mode='idle';renderTimer();$('announce').textContent='Laikmatis nustatytas iš naujo.'}
+  function record(slot,manual=false){const date=localDate();records[date] ||= {};records[date][slot]=new Date().toISOString();persist();renderRecords();$('announce').textContent=`${slot==='morning'?'Ryto':'Vakaro'} valymas įrašytas.`;if(!manual)reset()}
+  function renderRecords(){const today=records[localDate()]||{};for(const [slot,id] of [['morning','morning'],['evening','evening']]){const el=$(id),value=today[slot];el.textContent=value?`Pažymėta ${new Date(value).toLocaleTimeString('lt-LT',{hour:'2-digit',minute:'2-digit'})}`:'Dar nepažymėta';el.classList.toggle('done',!!value)}const week=$('week');week.replaceChildren();for(let offset=6;offset>=0;offset--){const date=new Date();date.setHours(12,0,0,0);date.setDate(date.getDate()-offset);const data=records[localDate(date)]||{},count=Number(!!data.morning)+Number(!!data.evening),cell=document.createElement('div');cell.className='day'+(offset===0?' today':'');const day=document.createElement('span');day.textContent=new Intl.DateTimeFormat('lt-LT',{weekday:'short'}).format(date);const amount=document.createElement('b');amount.textContent=count===2?'✓✓':String(count);cell.append(day,amount);cell.setAttribute('aria-label',`${localDate(date)}: ${count} valymai`);week.append(cell)}renderReport()}
+  function daysInMonth(month){const [year,index]=month.split('-').map(Number);return new Date(year,index,0).getDate()}
+  function reportDayLimit(month){const today=localDate(),current=today.slice(0,7);if(month<current)return daysInMonth(month);if(month===current)return Number(today.slice(8,10));return 0}
+  function timeLabel(value){return value?new Date(value).toLocaleTimeString('lt-LT',{hour:'2-digit',minute:'2-digit'}):'—'}
+  function monthEntries(month){return Object.entries(records).filter(([date])=>date.startsWith(month)).sort(([a],[b])=>a.localeCompare(b))}
+  function currentStreak(month){const limit=reportDayLimit(month);let streak=0;for(let day=limit;day>=1;day--){const key=`${month}-${String(day).padStart(2,'0')}`,value=records[key]||{};if(value.morning&&value.evening)streak++;else break}return streak}
+  function renderReport(){const month=$('reportMonth').value||localDate().slice(0,7),limit=reportDayLimit(month),entries=monthEntries(month),cleanings=entries.reduce((sum,[,day])=>sum+Number(!!day.morning)+Number(!!day.evening),0),perfect=entries.filter(([,day])=>day.morning&&day.evening).length,expected=limit*2,percent=expected?Math.round(cleanings/expected*100):0;$('reportCleanings').textContent=cleanings;$('reportPerfectDays').textContent=perfect;$('reportStreak').textContent=currentStreak(month);$('reportMissed').textContent=Math.max(0,expected-cleanings);$('reportPercent').textContent=`${percent} %`;const body=$('reportRows');body.replaceChildren();if(!entries.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=4;cell.className='empty';cell.textContent='Šį mėnesį įrašų dar nėra.';row.append(cell);body.append(row);return}for(const [date,day] of entries){const row=document.createElement('tr'),count=Number(!!day.morning)+Number(!!day.evening);for(const value of [date,timeLabel(day.morning),timeLabel(day.evening),String(count)]){const cell=document.createElement('td');cell.textContent=value;if(value!=='—'&&value!=='0')cell.classList.add('mark');row.append(cell)}body.append(row)}}
+  function downloadBlob(name,blob){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+  function blobBase64(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=reject;reader.readAsDataURL(blob)})}
+  async function deliverFile(name,type,content,title){const blob=content instanceof Blob?content:new Blob([content],{type}),plugins=window.Capacitor?.Plugins,Filesystem=plugins?.Filesystem,Share=plugins?.Share;
+    if(Filesystem&&Share){const saved=await Filesystem.writeFile({path:name,data:await blobBase64(blob),directory:'CACHE',recursive:true});await Share.share({title,text:title,files:[saved.uri],dialogTitle:'Bendrinti failą'});return}
+    const file=new File([blob],name,{type});if(navigator.canShare?.({files:[file]})){await navigator.share({title,text:title,files:[file]});return}downloadBlob(name,blob)}
+  function pdfFromJpeg(jpeg,width,height){const encoder=new TextEncoder(),parts=[],offsets=[0];let length=0;const add=value=>{const bytes=typeof value==='string'?encoder.encode(value):value;parts.push(bytes);length+=bytes.length};const object=(number,body)=>{offsets[number]=length;add(`${number} 0 obj\n${body}\nendobj\n`)};
+    add('%PDF-1.4\n%1234\n');object(1,'<< /Type /Catalog /Pages 2 0 R >>');object(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');object(3,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
+    offsets[4]=length;add(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`);add(jpeg);add('\nendstream\nendobj\n');
+    const commands='q\n595.28 0 0 841.89 0 0 cm\n/Im0 Do\nQ\n';object(5,`<< /Length ${encoder.encode(commands).length} >>\nstream\n${commands}endstream`);const xref=length;add('xref\n0 6\n0000000000 65535 f \n');for(let i=1;i<=5;i++)add(`${String(offsets[i]).padStart(10,'0')} 00000 n \n`);add(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+    const output=new Uint8Array(length);let position=0;for(const part of parts){output.set(part,position);position+=part.length}return new Blob([output],{type:'application/pdf'})}
+  async function createPdf(month){const canvas=document.createElement('canvas');canvas.width=1240;canvas.height=1754;const ctx=canvas.getContext('2d'),red='#ed3948',black='#111114',muted='#626269',line='#dedee2';ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=black;ctx.fillRect(0,0,canvas.width,260);ctx.fillStyle='#fff';ctx.font='800 68px Arial,sans-serif';ctx.fillText('ŠYPSENA',70,105);ctx.fillStyle=red;ctx.fillText('.',378,105);
+    const [year,index]=month.split('-').map(Number),monthName=new Intl.DateTimeFormat('lt-LT',{year:'numeric',month:'long'}).format(new Date(year,index-1,1));ctx.fillStyle='#d7d7da';ctx.font='32px Arial,sans-serif';ctx.fillText('Dantų valymo mėnesio ataskaita',70,158);ctx.fillStyle='#fff';ctx.font='700 34px Arial,sans-serif';ctx.fillText(monthName.charAt(0).toUpperCase()+monthName.slice(1),70,215);
+    const limit=reportDayLimit(month),entries=monthEntries(month),cleanings=entries.reduce((sum,[,day])=>sum+Number(!!day.morning)+Number(!!day.evening),0),perfect=entries.filter(([,day])=>day.morning&&day.evening).length,expected=limit*2,missed=Math.max(0,expected-cleanings),percent=expected?Math.round(cleanings/expected*100):0;ctx.fillStyle=red;ctx.beginPath();ctx.roundRect(980,72,190,78,39);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='800 38px Arial,sans-serif';ctx.fillText(`${percent} %`,1075,124);ctx.textAlign='left';
+    const stats=[[cleanings,'Valymų'],[perfect,'Pilnų dienų'],[currentStreak(month),'Dienų serija'],[missed,'Trūkstamų']];stats.forEach(([value,label],i)=>{const x=70+i*282;ctx.fillStyle='#f4f4f6';ctx.beginPath();ctx.roundRect(x,305,250,142,24);ctx.fill();ctx.fillStyle=black;ctx.font='800 48px Arial,sans-serif';ctx.fillText(String(value),x+24,365);ctx.fillStyle=muted;ctx.font='25px Arial,sans-serif';ctx.fillText(label,x+24,412)});
+    const left=70,top=505,rowH=34,width=1100,columns=[0,330,660,940,1100];ctx.fillStyle=black;ctx.fillRect(left,top,width,54);ctx.fillStyle='#fff';ctx.font='700 23px Arial,sans-serif';['Data','Rytas','Vakaras','Iš viso'].forEach((label,i)=>ctx.fillText(label,left+columns[i]+18,top+35));
+    ctx.font='22px Arial,sans-serif';const rows=Math.max(limit,1);for(let day=1;day<=rows;day++){const y=top+54+(day-1)*rowH,key=limit?`${month}-${String(day).padStart(2,'0')}`:'',value=records[key]||{},morning=timeLabel(value.morning),evening=timeLabel(value.evening),count=Number(!!value.morning)+Number(!!value.evening);ctx.fillStyle=day%2?'#fff':'#f7f7f8';ctx.fillRect(left,y,width,rowH);ctx.strokeStyle=line;ctx.beginPath();ctx.moveTo(left,y+rowH);ctx.lineTo(left+width,y+rowH);ctx.stroke();ctx.fillStyle=black;const cells=limit?[key,morning,evening,String(count)]:['Šį mėnesį įrašų dar nėra.','','',''];cells.forEach((text,i)=>ctx.fillText(text,left+columns[i]+18,y+24))}
+    ctx.fillStyle=muted;ctx.font='20px Arial,sans-serif';ctx.fillText(`Ataskaita sukurta ${new Date().toLocaleString('lt-LT')} · Duomenys saugomi tik jūsų įrenginyje`,70,1685);
+    const jpegBlob=await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('PDF image')),'image/jpeg',.92)),jpeg=new Uint8Array(await jpegBlob.arrayBuffer());return pdfFromJpeg(jpeg,canvas.width,canvas.height)}
+  async function exportPdf(){const month=$('reportMonth').value;try{$('announce').textContent='Ruošiama PDF ataskaita…';await deliverFile(`sypsena-${month}.pdf`,'application/pdf',await createPdf(month),`„Šypsena“ · ${month} ataskaita`);$('announce').textContent='PDF ataskaita paruošta.'}catch(error){console.error(error);$('announce').textContent='Nepavyko paruošti PDF ataskaitos.'}}
+  async function exportCsv(){const month=$('reportMonth').value,rows=[['Data','Rytas','Vakaras','Valymų skaičius']];for(const [date,day] of monthEntries(month))rows.push([date,timeLabel(day.morning),timeLabel(day.evening),Number(!!day.morning)+Number(!!day.evening)]);const csv='\\ufeff'+rows.map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(';')).join('\\r\\n');try{await deliverFile(`sypsena-${month}.csv`,'text/csv;charset=utf-8',csv,`„Šypsena“ · ${month} CSV ataskaita`);$('announce').textContent='Mėnesio CSV ataskaita paruošta.'}catch(error){console.error(error);$('announce').textContent='Nepavyko paruošti CSV ataskaitos.'}}
+  async function exportJson(){const backup={app:'Šypsena',version:1,exportedAt:new Date().toISOString(),records};try{await deliverFile(`sypsena-atsargine-kopija-${localDate()}.json`,'application/json',JSON.stringify(backup,null,2),'„Šypsena“ · atsarginė kopija');$('announce').textContent='Atsarginė kopija paruošta.'}catch(error){console.error(error);$('announce').textContent='Nepavyko paruošti atsarginės kopijos.'}}
+  async function importJson(file){try{const parsed=JSON.parse(await file.text()),incoming=parsed&&parsed.records;if(!validRecords(incoming))throw new Error('invalid');if(!confirm('Atkurti duomenis iš šio failo? Dabartiniai įrašai bus pakeisti.'))return;records=incoming;persist();renderRecords();$('announce').textContent='Duomenys sėkmingai atkurti.'}catch{$('announce').textContent='Šis failas nėra tinkama „Šypsenos“ atsarginė kopija.'}finally{$('importJson').value=''}}
+  $('signalType').value=sound.type;$('signalVolume').value=sound.volume;$('signalVibration').checked=sound.vibration;
+  $('signalType').addEventListener('change',event=>{sound.type=event.target.value;persistSoundSettings();$('announce').textContent='Garso signalo tipas išsaugotas.'});
+  $('signalVolume').addEventListener('change',event=>{sound.volume=event.target.value;persistSoundSettings();$('announce').textContent='Signalo garsumas išsaugotas.'});
+  $('signalVibration').addEventListener('change',event=>{sound.vibration=event.target.checked;persistSoundSettings();if(!sound.vibration)try{navigator.vibrate?.(0)}catch{}$('announce').textContent=sound.vibration?'Vibracija įjungta.':'Vibracija išjungta.'});
+  $('testSignal').addEventListener('click',()=>{playSignal();$('announce').textContent=sound.type==='off'?'Garso signalas išjungtas; įjungta vibracija.':'Paleistas pasirinktas garso signalas.'});
+  $('start').addEventListener('click',start);$('pause').addEventListener('click',()=>{tick();if(mode!=='running')return;stopTicker();mode='paused';renderTimer()});$('reset').addEventListener('click',reset);
+  for(const slot of ['Morning','Evening']){$(`add${slot}`).addEventListener('click',()=>record(slot.toLowerCase(),true));$(`save${slot}`).addEventListener('click',()=>record(slot.toLowerCase()))}
+  $('reportMonth').value=localDate().slice(0,7);$('reportMonth').addEventListener('change',renderReport);$('exportPdf').addEventListener('click',exportPdf);$('exportCsv').addEventListener('click',exportCsv);$('exportJson').addEventListener('click',exportJson);$('importJson').addEventListener('change',event=>{const [file]=event.target.files;if(file)importJson(file)});
+  let installPrompt=null;
+  function renderConnection(){const offline=!navigator.onLine;$('connectionStatus').classList.toggle('offline',offline);$('connectionStatus').textContent=offline?'Nėra interneto · programėlė veikia neprisijungus':'Prisijungta · paruošta darbui be interneto'}
+  window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;$('installCard').classList.remove('hidden')});
+  $('installApp').addEventListener('click',async()=>{if(!installPrompt)return;installPrompt.prompt();const result=await installPrompt.userChoice;if(result.outcome==='accepted')$('installCard').classList.add('hidden');installPrompt=null});
+  window.addEventListener('appinstalled',()=>{$('installCard').classList.add('hidden');$('announce').textContent='„Šypsena“ įdiegta šiame įrenginyje.'});
+  window.addEventListener('online',renderConnection);window.addEventListener('offline',renderConnection);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&mode==='running')tick();renderRecords()});renderConnection();renderTimer();renderRecords();
+})();
+</script>
+</body>
+</html>
