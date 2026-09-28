@@ -42,6 +42,53 @@
   canvas.className='fog-canvas';canvas.setAttribute('aria-hidden','true');
   map.getContainer().appendChild(canvas);
   const ctx=canvas.getContext('2d');
+  const MASK_SIZE=512,MASK_CACHE_LIMIT=24,maskCache=new Map();
+  let polarGrid=null;
+  function getPolarGrid(){
+    if(polarGrid)return polarGrid;
+    const angles=new Float32Array(MASK_SIZE*MASK_SIZE);
+    const distances=new Float32Array(MASK_SIZE*MASK_SIZE);
+    const half=MASK_SIZE/2;
+    for(let y=0;y<MASK_SIZE;y++)for(let x=0;x<MASK_SIZE;x++){
+      const dx=(x+.5-half)/half,dy=(y+.5-half)/half,index=y*MASK_SIZE+x;
+      distances[index]=Math.hypot(dx,dy);
+      angles[index]=(Math.atan2(dx,-dy)+Math.PI*2)%(Math.PI*2)/(Math.PI/4);
+    }
+    polarGrid={angles,distances};
+    return polarGrid;
+  }
+  function directionalMask(sectors){
+    const key=sectors.join(',');
+    if(maskCache.has(key)){
+      const cached=maskCache.get(key);
+      maskCache.delete(key);maskCache.set(key,cached);
+      return cached;
+    }
+    const configs=sectors.map(profile);
+    const maxRadius=Math.max(...configs.map(c=>c.radius));
+    const mask=document.createElement('canvas');
+    mask.width=mask.height=MASK_SIZE;
+    const maskContext=mask.getContext('2d');
+    const image=maskContext.createImageData(MASK_SIZE,MASK_SIZE);
+    const pixels=image.data,{angles,distances}=getPolarGrid();
+    for(let index=0;index<distances.length;index++){
+      const distance=distances[index]*maxRadius;
+      if(distance>maxRadius)continue;
+      const direction=angles[index];
+      const before=Math.floor(direction)%8,after=(before+1)%8;
+      const fraction=direction-Math.floor(direction);
+      const blend=fraction*fraction*(3-2*fraction);
+      const outer=configs[before].radius*(1-blend)+configs[after].radius*blend;
+      const inner=configs[before].clear*(1-blend)+configs[after].clear*blend;
+      const opacity=distance<=inner?1:distance>=outer?0:(outer-distance)/(outer-inner);
+      pixels[index*4+3]=Math.round(255*opacity);
+    }
+    maskContext.putImageData(image,0,0);
+    const result={canvas:mask,maxRadius};
+    maskCache.set(key,result);
+    if(maskCache.size>MASK_CACHE_LIMIT)maskCache.delete(maskCache.keys().next().value);
+    return result;
+  }
   function draw(){
     queued=false;
     const size=map.getSize(),ratio=Math.min(devicePixelRatio||1,2);
@@ -54,37 +101,26 @@
     if(!points.length)return;
     ctx.globalCompositeOperation='destination-out';
     for(const [lat,lon,kind='field',sectors] of points){
-      const configs=Array.isArray(sectors)?sectors.map(profile):[profile(kind)];
+      const config=profile(kind);
       const p=map.latLngToContainerPoint([lat,lon]);
       const north=map.latLngToContainerPoint([lat+1000/111320,lon]);
       const pxPerMeter=Math.abs(north.y-p.y)/1000;
-      const outer=Math.max(...configs.map(c=>c.radius))*pxPerMeter;
+      const maxRadius=Array.isArray(sectors)
+        ?Math.max(...sectors.map(s=>profile(s).radius)):config.radius;
+      const outer=maxRadius*pxPerMeter;
       if(outer<.3)continue;
       if(p.x+outer<0||p.x-outer>size.x||p.y+outer<0||p.y-outer>size.y)continue;
+      const shape=Array.isArray(sectors)?directionalMask(sectors):null;
       ctx.save();
       ctx.translate(p.x,p.y);
-      const count=Array.isArray(sectors)?16:1;
-      for(let i=0;i<count;i++){
-        const first=configs[Math.floor(i/2)%8];
-        const next=configs[(Math.floor(i/2)+1)%8];
-        const config=count===1?configs[0]:i%2===0?first:{
-          radius:(first.radius+next.radius)/2,clear:(first.clear+next.clear)/2
-        };
-        const radius=config.radius*pxPerMeter;
-        if(count>1){
-          const half=Math.PI/count;
-          const center=-Math.PI/2+i*2*half;
-          ctx.save();ctx.beginPath();ctx.moveTo(0,0);
-          ctx.arc(0,0,radius+1,center-half,center+half);
-          ctx.closePath();ctx.clip();
-        }
-        const fade=ctx.createRadialGradient(0,0,0,0,0,radius);
+      if(shape)ctx.drawImage(shape.canvas,-outer,-outer,2*outer,2*outer);
+      else{
+        const fade=ctx.createRadialGradient(0,0,0,0,0,outer);
         fade.addColorStop(0,'rgba(0,0,0,1)');
         fade.addColorStop(config.clear/config.radius,'rgba(0,0,0,1)');
         fade.addColorStop(1,'rgba(0,0,0,0)');
         ctx.fillStyle=fade;
-        ctx.beginPath();ctx.arc(0,0,radius,0,Math.PI*2);ctx.fill();
-        if(count>1)ctx.restore();
+        ctx.beginPath();ctx.arc(0,0,outer,0,Math.PI*2);ctx.fill();
       }
       ctx.restore();
     }
