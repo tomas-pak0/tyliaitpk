@@ -1,7 +1,8 @@
 /* ETN prototype: geographical fog over the Leaflet map used by Kur aš? */
 (() => {
   'use strict';
-  const KEY='etn-explored-v1', RADIUS=1000, MAX_ACCURACY=100, MAX_POINTS=5000;
+  const KEY='etn-explored-v1', LOOPS_KEY='etn-enclosed-v1';
+  const RADIUS=1000, MAX_ACCURACY=100, MAX_POINTS=5000, MAX_LOOPS=100;
   const $=id=>document.getElementById(id);
   const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5}).setView([55.1694,23.8813],7);
   L.control.zoom({position:'bottomright'}).addTo(map);
@@ -14,7 +15,16 @@
       return Array.isArray(data)?data.slice(-MAX_POINTS).filter(p=>Array.isArray(p)&&p.length===2&&Number.isFinite(p[0])&&Number.isFinite(p[1])&&Math.abs(p[0])<=90&&Math.abs(p[1])<=180):[];
     }catch{return [];}
   }
-  let points=load(),watcher=null,lastFix=null,marker=null,queued=false;
+  function loadLoops(){
+    try{
+      const saved=JSON.parse(localStorage.getItem(LOOPS_KEY)||'[]');
+      return Array.isArray(saved)?saved.slice(-MAX_LOOPS).filter(ring=>
+        Array.isArray(ring)&&ring.length>=7&&ring.length<=MAX_POINTS&&
+        ring.every(p=>Array.isArray(p)&&p.length===2&&Number.isFinite(p[0])&&
+          Number.isFinite(p[1])&&Math.abs(p[0])<=90&&Math.abs(p[1])<=180)):[];
+    }catch{return [];}
+  }
+  let points=load(),loops=loadLoops(),trail=[],watcher=null,lastFix=null,marker=null,queued=false;
   $('count').textContent=String(points.length);
   const canvas=document.createElement('canvas');
   canvas.className='fog-canvas';canvas.setAttribute('aria-hidden','true');
@@ -45,11 +55,21 @@
       const fade=ctx.createRadialGradient(0,0,0,0,0,1);
       fade.addColorStop(0,'rgba(0,0,0,1)');
       fade.addColorStop(.25,'rgba(0,0,0,1)');
-      fade.addColorStop(.5,'rgba(0,0,0,.5)');
       fade.addColorStop(1,'rgba(0,0,0,0)');
       ctx.fillStyle=fade;
       ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();
       ctx.restore();
+    }
+    // A walked, closed ring reveals everything it surrounds, even where
+    // the individual 1 km clearings leave fog in the middle.
+    ctx.fillStyle='#000';
+    for(const ring of loops){
+      ctx.beginPath();
+      ring.forEach(([lat,lon],index)=>{
+        const p=map.latLngToContainerPoint([lat,lon]);
+        if(index===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+      });
+      ctx.closePath();ctx.fill();
     }
     ctx.globalCompositeOperation='source-over';
   }
@@ -60,7 +80,39 @@
     if(points.length>MAX_POINTS)points=points.slice(-MAX_POINTS);
     try{localStorage.setItem(KEY,JSON.stringify(points));}
     catch{$('status').textContent='Įrenginyje pritrūko vietos istorijai išsaugoti.';}
-    $('count').textContent=String(points.length);redraw();
+    $('count').textContent=String(points.length);
+    trail.push([lat,lon]);
+    if(trail.length>1500)trail.shift();
+    detectEnclosure();
+    redraw();
+  }
+  function ringArea(ring){
+    const origin=ring[0],cos=Math.cos(origin[0]*Math.PI/180);
+    let twice=0;
+    for(let i=0;i<ring.length;i++){
+      const a=ring[i],b=ring[(i+1)%ring.length];
+      const ax=(a[1]-origin[1])*111320*cos,ay=(a[0]-origin[0])*111320;
+      const bx=(b[1]-origin[1])*111320*cos,by=(b[0]-origin[0])*111320;
+      twice+=ax*by-bx*ay;
+    }
+    return Math.abs(twice)/2;
+  }
+  function detectEnclosure(){
+    if(trail.length<7)return;
+    const current=trail[trail.length-1];
+    for(let i=0;i<=trail.length-7;i++){
+      if(map.distance(current,trail[i])>100)continue;
+      const ring=trail.slice(i);
+      let perimeter=map.distance(current,trail[i]);
+      for(let j=1;j<ring.length;j++)perimeter+=map.distance(ring[j-1],ring[j]);
+      if(perimeter<450||ringArea(ring)<15000)continue;
+      loops.push(ring);
+      if(loops.length>MAX_LOOPS)loops.shift();
+      try{localStorage.setItem(LOOPS_KEY,JSON.stringify(loops));}
+      catch{$('status').textContent='Nepavyko išsaugoti uždaros teritorijos.';}
+      trail=[current];
+      return;
+    }
   }
   function onPosition(position){
     const {latitude:lat,longitude:lon,accuracy}=position.coords;
@@ -92,7 +144,7 @@
   }
   function stop(){
     if(watcher!==null)navigator.geolocation.clearWatch(watcher);
-    watcher=null;lastFix=null;$('start').disabled=false;$('stop').disabled=true;
+    watcher=null;lastFix=null;trail=[];$('start').disabled=false;$('stop').disabled=true;
   }
   $('start').onclick=()=>{
     if(watcher!==null)return;
