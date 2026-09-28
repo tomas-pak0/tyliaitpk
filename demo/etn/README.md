@@ -9,6 +9,7 @@ Atskiras pradinis prototipas pagal „Kur aš?“ žemėlapį.
 - Atrasti taškai ir jų vietovės tipai saugomi naršyklės localStorage ir išlieka perkrovus puslapį. Senesni taškai išsaugo jau atidengtą 1 km plotą.
 - Rūkas iš naujo piešiamas pagal geografines koordinates keičiant mastelį.
 - Šalių ribos rodomos ant žemėlapio. Pagal GPS vietą pateikiamas šalies pavadinimas lietuviškai ir vėliava. Šalies ištyrinėjimo procentas yra apytikslis: 100 m gardelėje suskaičiuojamas didžiausias persidengiančių atidengimo kaukių matomumas ir pilnai atvertų uždarų plotų dalis, suma dalijama iš šalies sausumos ploto. Rodoma penkių skaitmenų po kablelio tikslumu; labai nedideli plotai gali būti suapvalinti iki 0,00000 %. Šalies ribos supaprastintos, todėl šalia sienos skaičius netinka matavimams.
+- Šviesiai pilkos šalių ribos matomos ir virš neatrastos teritorijos rūko. Pasaulio mygtukas atveria atskirą žemėlapį su visomis platumomis nuo 90° pietų iki 90° šiaurės. Pirštu galima slinkti rytų ir vakarų kryptimi; šiame vaizde šalių pavadinimai nerašomi. Mygtukas „Rodyti mano vietą“ perkelia pasaulio vaizdą į dabartinį ilgumos tašką.
 
 Paleidimas: ETN aplanke vykdyti python3 -m http.server 8000 ir atverti http://localhost:8000. Telefone reikia HTTPS adreso ir vietos leidimo. Žemėlapio plytelėms reikia interneto.
 

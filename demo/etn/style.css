@@ -4,3 +4,10 @@
 /* Country progress follows the existing dashboard rhythm. */
 .stat-country{grid-column:span 2}.stat-country #countryFlag{font-size:29px;line-height:1}.stat-country strong{overflow-wrap:anywhere}
 @media(max-width:650px){.dashboard{grid-template-columns:repeat(2,minmax(0,1fr))}.stat-country{grid-column:span 1}.stat-country #countryFlag{font-size:23px}}
+/* Independent borders stay above the dark fog, including unrevealed places. */
+.border-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:650;pointer-events:none}
+.world-view{position:absolute;inset:0;z-index:680;background:#070d11;overflow-x:auto;overflow-y:hidden;overscroll-behavior:contain;touch-action:pan-x;scrollbar-width:thin;scrollbar-color:#627276 #101b1f}
+.world-view[hidden]{display:none}
+.world-view canvas{display:block;height:100%;max-width:none;margin:0 auto}
+.world-button{position:absolute;right:20px;top:72px;z-index:700;width:42px;height:42px;border:1px solid #71807e;border-radius:10px;background:#111a19;color:#fff;font-size:30px;line-height:1;cursor:pointer}
+.map-shell.world-active .leaflet-control-zoom{display:none}

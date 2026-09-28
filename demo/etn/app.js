@@ -38,9 +38,8 @@
   let points=load(),loops=loadLoops(),trail=[],watcher=null,lastFix=null,marker=null,queued=false;
   let terrainFix=null,terrainPending=false,nextTerrainCheck=0;
   let countries=[],currentCountry=null,progressTimer=null,progressRevision=0;
-  const borderPane=map.createPane('countryBorders');
-  borderPane.style.zIndex='650';borderPane.style.pointerEvents='none';
-  const borders=L.layerGroup().addTo(map);
+  let worldActive=false;
+  const worldView=$('worldView'),worldCanvas=$('worldCanvas');
   const countryNames=typeof Intl.DisplayNames==='function'
     ?new Intl.DisplayNames(['lt'],{type:'region'}):null;
   const countryName=feature=>{
@@ -96,18 +95,8 @@
     return feature;
   }
   function updateBorders(){
-    borders.clearLayers();
-    if(!countries.length)return;
-    const visible=map.getBounds();
-    for(const feature of countries){
-      const [west,south,east,north]=feature.bounds;
-      if(!visible.intersects([[south,west],[north,east]]))continue;
-      L.geoJSON(feature,{pane:'countryBorders',interactive:false,style:{
-        color:feature===currentCountry?'#fa9b83':'#e78371',
-        weight:feature===currentCountry?2.5:1.3,opacity:feature===currentCountry?.9:.65,
-        fill:false
-      }}).addTo(borders);
-    }
+    redraw();
+    if(worldActive)renderWorld();
   }
   map.on('moveend',updateBorders);
   function findCountry(point){
@@ -226,6 +215,10 @@
   canvas.className='fog-canvas';canvas.setAttribute('aria-hidden','true');
   map.getContainer().appendChild(canvas);
   const ctx=canvas.getContext('2d');
+  const borderCanvas=document.createElement('canvas');
+  borderCanvas.className='border-canvas';borderCanvas.setAttribute('aria-hidden','true');
+  map.getContainer().appendChild(borderCanvas);
+  const borderCtx=borderCanvas.getContext('2d');
   const coverage=document.createElement('canvas');
   const coverageCtx=coverage.getContext('2d',{willReadFrequently:true});
   const MASK_SIZE=512,MASK_CACHE_LIMIT=24,maskCache=new Map();
@@ -331,7 +324,92 @@
       fog.data[i+3]=255-visible;
     }
     ctx.putImageData(fog,0,0);
+    drawBorders(size,ratio);
   }
+  function drawBorders(size,ratio){
+    if(borderCanvas.width!==canvas.width||borderCanvas.height!==canvas.height){
+      borderCanvas.width=canvas.width;borderCanvas.height=canvas.height;
+    }
+    borderCtx.setTransform(ratio,0,0,ratio,0,0);
+    borderCtx.clearRect(0,0,size.x,size.y);
+    if(!countries.length)return;
+    const visible=map.getBounds();
+    borderCtx.strokeStyle='#cbd2d2';borderCtx.lineWidth=1.65;
+    borderCtx.lineCap='round';borderCtx.lineJoin='round';
+    for(const feature of countries){
+      const [west,south,east,north]=feature.bounds;
+      if(!visible.intersects([[south,west],[north,east]]))continue;
+      borderCtx.beginPath();
+      for(const polygon of rings(feature))for(const ring of polygon){
+        let previous=null;
+        for(const [lon,lat] of ring){
+          const next=map.latLngToContainerPoint([lat,lon]);
+          if(previous&&Math.min(previous.x,next.x)<=size.x+2&&
+            Math.max(previous.x,next.x)>=-2&&Math.min(previous.y,next.y)<=size.y+2&&
+            Math.max(previous.y,next.y)>=-2){
+            borderCtx.moveTo(previous.x,previous.y);
+            borderCtx.lineTo(next.x,next.y);
+          }
+          previous=next;
+        }
+      }
+      borderCtx.stroke();
+    }
+  }
+  function renderWorld(center=false){
+    if(!worldActive)return;
+    const height=worldView.clientHeight,width=2*height;
+    if(height<=0)return;
+    const ratio=Math.min(devicePixelRatio||1,2);
+    worldCanvas.style.width=width+'px';worldCanvas.style.height=height+'px';
+    worldCanvas.width=Math.round(width*ratio);worldCanvas.height=Math.round(height*ratio);
+    const c=worldCanvas.getContext('2d');
+    c.setTransform(ratio,0,0,ratio,0,0);
+    c.fillStyle='#070d11';c.fillRect(0,0,width,height);
+    const xy=([lon,lat])=>[(lon+180)/360*width,(90-lat)/180*height];
+    c.lineJoin='round';c.lineWidth=1.05;
+    for(const feature of countries){
+      for(const polygon of rings(feature)){
+        c.beginPath();
+        for(const ring of polygon){
+          ring.forEach((coordinate,index)=>{
+            const [x,y]=xy(coordinate);
+            if(index===0)c.moveTo(x,y);else c.lineTo(x,y);
+          });
+          c.closePath();
+        }
+        c.fillStyle='#1b2729';c.fill('evenodd');
+        c.strokeStyle='#cbd2d2';c.stroke();
+      }
+    }
+    // Small markers show visited regions without printing country names.
+    c.fillStyle='#db806b';
+    for(const [lat,lon] of points){
+      const [x,y]=xy([lon,lat]);
+      c.beginPath();c.arc(x,y,1.6,0,Math.PI*2);c.fill();
+    }
+    if(marker){
+      const {lat,lng}=marker.getLatLng(),[x,y]=xy([lng,lat]);
+      c.beginPath();c.arc(x,y,5,0,Math.PI*2);
+      c.fillStyle='#e67c68';c.fill();c.strokeStyle='#fff';c.lineWidth=2;c.stroke();
+    }
+    if(center){
+      const lon=marker?marker.getLatLng().lng:23.8813;
+      worldView.scrollLeft=(lon+180)/360*width-worldView.clientWidth/2;
+    }
+  }
+  $('worldButton').onclick=()=>{
+    worldActive=!worldActive;
+    worldView.hidden=!worldActive;
+    document.querySelector('.map-shell').classList.toggle('world-active',worldActive);
+    $('worldButton').textContent=worldActive?'↩':'◎';
+    $('worldButton').setAttribute('aria-label',worldActive?'Grįžti į vietos žemėlapį':'Rodyti visą pasaulį');
+    $('worldButton').setAttribute('aria-pressed',String(worldActive));
+    $('mapLabel').textContent=worldActive?'PASAULIO ŽEMĖLAPIS':marker?'ATRANDAMA TERITORIJA':'NEATRASTA TERITORIJA';
+    if(worldActive)renderWorld(true);
+    else map.invalidateSize();
+  };
+  window.addEventListener('resize',()=>{if(worldActive)renderWorld(true);});
   function redraw(){if(!queued){queued=true;requestAnimationFrame(draw);}}
   map.on('move zoom zoomanim zoomend resize viewreset',redraw);redraw();
   function save(lat,lon,kind,sectors){
@@ -346,6 +424,7 @@
     if(trail.length>1500)trail.shift();
     detectEnclosure();
     redraw();
+    if(worldActive)renderWorld();
     scheduleProgress();
   }
   function ringArea(ring){
@@ -468,6 +547,7 @@
     }
     if(!marker){marker=L.circleMarker(point,{radius:8,color:'#fff',weight:3,fillColor:'#dd785f',fillOpacity:1}).addTo(map);map.setView(point,15);}
     else marker.setLatLng(point);
+    if(worldActive)renderWorld();
     setCountry({lat,lng:lon});
     const terrain=terrainFor(point);
     updateTerrainLabel(terrain.kind,terrain.sectors);
@@ -483,7 +563,7 @@
       $('status').textContent='Tyrinėjama · atrasta vieta išsaugota šiame įrenginyje.';
     }else $('status').textContent='Vieta nustatyta · laukiamas judėjimas.';
     checkTerrain(point);
-    $('mapLabel').textContent='ATRANDAMA TERITORIJA';
+    if(!worldActive)$('mapLabel').textContent='ATRANDAMA TERITORIJA';
   }
   function stop(){
     if(watcher!==null)navigator.geolocation.clearWatch(watcher);
@@ -500,5 +580,5 @@
     $('status').textContent='Laukiama buvimo vietos leidimo ir pirmojo GPS matavimo…';
   };
   $('stop').onclick=()=>{stop();$('status').textContent='Tyrinėjimas sustabdytas. Atrastos vietos išsaugotos.';};
-  $('recenter').onclick=()=>{if(marker)map.flyTo(marker.getLatLng(),Math.max(map.getZoom(),15),{duration:.6});else $('status').textContent='Pirmiausia pradėk tyrinėjimą ir leisk nustatyti vietą.';};
+  $('recenter').onclick=()=>{if(marker){if(worldActive)renderWorld(true);else map.flyTo(marker.getLatLng(),Math.max(map.getZoom(),15),{duration:.6});}else $('status').textContent='Pirmiausia pradėk tyrinėjimą ir leisk nustatyti vietą.';};
 })();
