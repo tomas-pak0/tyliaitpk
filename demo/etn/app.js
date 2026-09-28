@@ -28,23 +28,29 @@
     }
     ctx.setTransform(ratio,0,0,ratio,0,0);
     ctx.clearRect(0,0,size.x,size.y);
-    ctx.fillStyle='rgba(5,10,12,.96)';ctx.fillRect(0,0,size.x,size.y);
+    ctx.fillStyle='#050a0c';ctx.fillRect(0,0,size.x,size.y);
     if(!points.length)return;
-    const viewport=map.getBounds().pad(.8);
     ctx.globalCompositeOperation='destination-out';
-    ctx.beginPath();
     for(const [lat,lon] of points){
-      if(!viewport.contains([lat,lon]))continue;
       const p=map.latLngToContainerPoint([lat,lon]);
       const north=map.latLngToContainerPoint([lat+RADIUS/111320,lon]);
       const cos=Math.max(.01,Math.cos(lat*Math.PI/180));
       const east=map.latLngToContainerPoint([lat,lon+RADIUS/(111320*cos)]);
       const rx=Math.abs(east.x-p.x),ry=Math.abs(north.y-p.y);
       if(rx<.3&&ry<.3)continue;
-      ctx.moveTo(p.x+rx,p.y);
-      ctx.ellipse(p.x,p.y,Math.max(rx,.3),Math.max(ry,.3),0,0,Math.PI*2);
+      if(p.x+rx<0||p.x-rx>size.x||p.y+ry<0||p.y-ry>size.y)continue;
+      ctx.save();
+      ctx.translate(p.x,p.y);
+      ctx.scale(rx,ry);
+      const fade=ctx.createRadialGradient(0,0,0,0,0,1);
+      fade.addColorStop(0,'rgba(0,0,0,1)');
+      fade.addColorStop(.25,'rgba(0,0,0,1)');
+      fade.addColorStop(.5,'rgba(0,0,0,.5)');
+      fade.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=fade;
+      ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();
+      ctx.restore();
     }
-    ctx.fill();
     ctx.globalCompositeOperation='source-over';
   }
   function redraw(){if(!queued){queued=true;requestAnimationFrame(draw);}}

@@ -2,7 +2,7 @@
 
 Atskiras pradinis prototipas pagal „Kur aš?“ žemėlapį.
 
-- Tamsus rūkas dengia žemėlapį. Patikima GPS pozicija atveria 1 km spindulį.
+- Tamsus rūkas dengia žemėlapį. Patikima GPS pozicija atveria 1 km spindulį: iki 0,25 km žemėlapis skaidrus, ties 0,5 km rūkas pusiau skaidrus, ties 1 km — visiškai nepermatomas.
 - Judant atveriamos naujos vietos. Tik trumpi ir realistiški tarpai užpildomi.
 - GPS tikslumas turi būti iki 100 m; staigūs šuoliai ignoruojami.
 - Atrasti taškai saugomi naršyklės localStorage ir išlieka perkrovus puslapį.
