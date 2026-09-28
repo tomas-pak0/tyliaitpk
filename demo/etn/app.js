@@ -42,6 +42,8 @@
   canvas.className='fog-canvas';canvas.setAttribute('aria-hidden','true');
   map.getContainer().appendChild(canvas);
   const ctx=canvas.getContext('2d');
+  const coverage=document.createElement('canvas');
+  const coverageCtx=coverage.getContext('2d',{willReadFrequently:true});
   const MASK_SIZE=512,MASK_CACHE_LIMIT=24,maskCache=new Map();
   let polarGrid=null;
   function getPolarGrid(){
@@ -73,15 +75,23 @@
     const pixels=image.data,{angles,distances}=getPolarGrid();
     for(let index=0;index<distances.length;index++){
       const distance=distances[index]*maxRadius;
-      if(distance>maxRadius)continue;
-      const direction=angles[index];
-      const before=Math.floor(direction)%8,after=(before+1)%8;
-      const fraction=direction-Math.floor(direction);
-      const blend=fraction*fraction*(3-2*fraction);
-      const outer=configs[before].radius*(1-blend)+configs[after].radius*blend;
-      const inner=configs[before].clear*(1-blend)+configs[after].clear*blend;
-      const opacity=distance<=inner?1:distance>=outer?0:(outer-distance)/(outer-inner);
-      pixels[index*4+3]=Math.round(255*opacity);
+      let visibility=0;
+      if(distance<=maxRadius){
+        const direction=angles[index];
+        const before=Math.floor(direction)%8,after=(before+1)%8;
+        const fraction=direction-Math.floor(direction);
+        const blend=fraction*fraction*(3-2*fraction);
+        const visibilityAt=config=>{
+          if(distance<=config.clear)return 1;
+          if(distance>=config.radius)return 0;
+          return (config.radius-distance)/(config.radius-config.clear);
+        };
+        visibility=visibilityAt(configs[before])*(1-blend)+
+          visibilityAt(configs[after])*blend;
+      }
+      const offset=index*4,value=Math.round(255*visibility);
+      pixels[offset]=pixels[offset+1]=pixels[offset+2]=value;
+      pixels[offset+3]=255;
     }
     maskContext.putImageData(image,0,0);
     const result={canvas:mask,maxRadius};
@@ -95,11 +105,14 @@
     if(canvas.width!==Math.round(size.x*ratio)||canvas.height!==Math.round(size.y*ratio)){
       canvas.width=Math.round(size.x*ratio);canvas.height=Math.round(size.y*ratio);
     }
-    ctx.setTransform(ratio,0,0,ratio,0,0);
-    ctx.clearRect(0,0,size.x,size.y);
-    ctx.fillStyle='#050a0c';ctx.fillRect(0,0,size.x,size.y);
-    if(!points.length)return;
-    ctx.globalCompositeOperation='destination-out';
+    if(coverage.width!==canvas.width||coverage.height!==canvas.height){
+      coverage.width=canvas.width;coverage.height=canvas.height;
+    }
+    coverageCtx.setTransform(ratio,0,0,ratio,0,0);
+    coverageCtx.globalCompositeOperation='source-over';
+    coverageCtx.fillStyle='#000';
+    coverageCtx.fillRect(0,0,size.x,size.y);
+    coverageCtx.globalCompositeOperation='lighten';
     for(const [lat,lon,kind='field',sectors] of points){
       const config=profile(kind);
       const p=map.latLngToContainerPoint([lat,lon]);
@@ -110,32 +123,30 @@
       const outer=maxRadius*pxPerMeter;
       if(outer<.3)continue;
       if(p.x+outer<0||p.x-outer>size.x||p.y+outer<0||p.y-outer>size.y)continue;
-      const shape=Array.isArray(sectors)?directionalMask(sectors):null;
-      ctx.save();
-      ctx.translate(p.x,p.y);
-      if(shape)ctx.drawImage(shape.canvas,-outer,-outer,2*outer,2*outer);
-      else{
-        const fade=ctx.createRadialGradient(0,0,0,0,0,outer);
-        fade.addColorStop(0,'rgba(0,0,0,1)');
-        fade.addColorStop(config.clear/config.radius,'rgba(0,0,0,1)');
-        fade.addColorStop(1,'rgba(0,0,0,0)');
-        ctx.fillStyle=fade;
-        ctx.beginPath();ctx.arc(0,0,outer,0,Math.PI*2);ctx.fill();
-      }
-      ctx.restore();
+      const shape=directionalMask(Array.isArray(sectors)?sectors:Array(8).fill(kind));
+      coverageCtx.save();
+      coverageCtx.translate(p.x,p.y);
+      coverageCtx.drawImage(shape.canvas,-outer,-outer,2*outer,2*outer);
+      coverageCtx.restore();
     }
     // A walked, closed ring reveals everything it surrounds, even where
     // the individual 1 km clearings leave fog in the middle.
-    ctx.fillStyle='#000';
+    coverageCtx.fillStyle='#fff';
     for(const ring of loops){
-      ctx.beginPath();
+      coverageCtx.beginPath();
       ring.forEach(([lat,lon],index)=>{
         const p=map.latLngToContainerPoint([lat,lon]);
-        if(index===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);
+        if(index===0)coverageCtx.moveTo(p.x,p.y);else coverageCtx.lineTo(p.x,p.y);
       });
-      ctx.closePath();ctx.fill();
+      coverageCtx.closePath();coverageCtx.fill();
     }
-    ctx.globalCompositeOperation='source-over';
+    const fog=coverageCtx.getImageData(0,0,coverage.width,coverage.height);
+    for(let i=0;i<fog.data.length;i+=4){
+      const visible=fog.data[i];
+      fog.data[i]=5;fog.data[i+1]=10;fog.data[i+2]=12;
+      fog.data[i+3]=255-visible;
+    }
+    ctx.putImageData(fog,0,0);
   }
   function redraw(){if(!queued){queued=true;requestAnimationFrame(draw);}}
   map.on('move zoom zoomanim zoomend resize viewreset',redraw);redraw();

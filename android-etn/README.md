@@ -1,6 +1,6 @@
 # ETN Android
 
-ETN v0.2.2 Android WebView apvalkalas. Lokalūs HTML, CSS ir JS failai imami iš demo/etn, su Android programos HTTPS kilmės imitacija. Žemėlapio plytelės kraunamos internetu, o vietovės tipui 8 kryptimis nustatyti užklausos siunčiamos „OpenStreetMap Overpass“. Kryptinės ribos suliejamos tolygiu perėjimu. Android paprašo GPS leidimo.
+ETN v0.2.3 Android WebView apvalkalas. Lokalūs HTML, CSS ir JS failai imami iš demo/etn, su Android programos HTTPS kilmės imitacija. Žemėlapio plytelės kraunamos internetu, o vietovės tipui 8 kryptimis nustatyti užklausos siunčiamos „OpenStreetMap Overpass“. Kryptinių ir persidengiančių plotų rūkas piešiamas vientisai. Android paprašo GPS leidimo.
 
 Surinkimas iš repozitorijos šaknies:
 
