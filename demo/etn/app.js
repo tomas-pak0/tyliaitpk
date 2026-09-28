@@ -39,6 +39,7 @@
   let terrainFix=null,terrainPending=false,nextTerrainCheck=0;
   let countries=[],currentCountry=null,progressTimer=null,progressRevision=0;
   let worldActive=false;
+  let followPosition=true;
   const worldView=$('worldView'),worldCanvas=$('worldCanvas');
   const countryNames=typeof Intl.DisplayNames==='function'
     ?new Intl.DisplayNames(['lt'],{type:'region'}):null;
@@ -130,6 +131,38 @@
     $('countryProgress').textContent=found?'Skaičiuojama…':'–';
     updateBorders();scheduleProgress();
   }
+  function zoomToCountry(feature){
+    if(!feature)return;
+    $('countryPicker').hidden=true;
+    if(worldActive)$('worldButton').onclick();
+    followPosition=false;
+    const [west,south,east,north]=feature.bounds;
+    map.invalidateSize();
+    map.fitBounds([[south,west],[north,east]],{padding:[24,24],animate:true});
+    $('status').textContent='Rodoma '+countryName(feature)+'. Vietos sekimą grąžinsi paspaudęs taikinio mygtuką.';
+  }
+  $('closeCountries').onclick=()=>{$('countryPicker').hidden=true;};
+  $('countryCard').onclick=()=>{
+    if(!countries.length){$('status').textContent='Pirmiausia įkeliamos šalių ribos.';return;}
+    const visited=new Set();
+    for(const [lat,lon] of points){
+      const feature=countries.find(candidate=>inCountry(lon,lat,candidate));
+      if(feature)visited.add(feature);
+    }
+    if(currentCountry)visited.add(currentCountry);
+    const options=[...visited];
+    if(options.length<2){zoomToCountry(options[0]);return;}
+    options.sort((a,b)=>countryName(a).localeCompare(countryName(b),'lt'));
+    const container=$('countryOptions');container.replaceChildren();
+    for(const feature of options){
+      const button=document.createElement('button');
+      button.type='button';button.textContent=countryFlag(feature.properties.code)+' '+countryName(feature);
+      button.onclick=()=>zoomToCountry(feature);
+      container.appendChild(button);
+    }
+    $('countryPicker').hidden=false;
+  };
+  map.on('dragstart',()=>{followPosition=false;});
   function pointVisibility(distance,angle,sectors){
     const position=(angle+Math.PI*2)%(Math.PI*2)/(Math.PI/4);
     const before=Math.floor(position)%8,after=(before+1)%8;
@@ -399,6 +432,7 @@
     }
   }
   $('worldButton').onclick=()=>{
+    $('countryPicker').hidden=true;
     worldActive=!worldActive;
     worldView.hidden=!worldActive;
     document.querySelector('.map-shell').classList.toggle('world-active',worldActive);
@@ -473,8 +507,17 @@
     $('terrain').textContent=(kind==='unknown'?'Nežinoma':config.label)+(smallest!==largest?' · mišru':'');
   }
   function terrainFor(point){
-    return terrainFix&&Date.now()-terrainFix.at<90000&&map.distance(point,terrainFix.point)<120
-      ?{kind:terrainFix.kind,sectors:terrainFix.sectors}:{kind:'unknown',sectors:null};
+    if(terrainFix&&terrainFix.kind!=='unknown'&&Date.now()-terrainFix.at<15*60000&&
+      map.distance(point,terrainFix.point)<400)
+      return {kind:terrainFix.kind,sectors:terrainFix.sectors};
+    // Keep nearby classified samples useful while the next lookup is pending.
+    for(let i=points.length-1;i>=0;i--){
+      const saved=points[i];
+      if(saved[2]&&saved[2]!=='unknown'&&Math.abs(saved[0]-point[0])<.004&&
+        Math.abs(saved[1]-point[1])<.007&&map.distance(point,saved)<300)
+        return {kind:saved[2],sectors:saved[3]||null};
+    }
+    return {kind:'unknown',sectors:null};
   }
   function directionPoint(point,meters,index){
     const angle=index*Math.PI/4,cos=Math.max(.01,Math.cos(point[0]*Math.PI/180));
@@ -500,23 +543,39 @@
   async function checkTerrain(point){
     const now=Date.now();
     if(terrainPending||now<nextTerrainCheck||
-      (terrainFix&&now-terrainFix.at<90000&&map.distance(point,terrainFix.point)<150))return;
-    terrainPending=true;nextTerrainCheck=now+20000;
+      (terrainFix&&terrainFix.kind!=='unknown'&&now-terrainFix.at<75000&&map.distance(point,terrainFix.point)<180))return;
+    terrainPending=true;nextTerrainCheck=now+15000;
     const samples=[point,...Array.from({length:8},(_,i)=>directionPoint(point,300,i))];
     const query=terrainQuery(samples);
     try{
-      const response=await fetch('https://overpass-api.de/api/interpreter',{
-        method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body:'data='+encodeURIComponent(query),signal:AbortSignal.timeout(35000)
-      });
-      if(!response.ok)throw Error('Overpass '+response.status);
-      const data=await response.json();
-      if(!Array.isArray(data.elements))throw Error('Invalid Overpass response');
-      const [kind,...sectors]=parseSamples(data.elements,samples.length);
+      let groups=null;
+      for(const endpoint of ['https://overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter']){
+        try{
+          const response=await fetch(endpoint,{
+            method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:'data='+encodeURIComponent(query),signal:AbortSignal.timeout(18000)
+          });
+          if(!response.ok)throw Error('Overpass '+response.status);
+          const data=await response.json();
+          if(!Array.isArray(data.elements))throw Error('Invalid Overpass response');
+          groups=parseSamples(data.elements,samples.length);break;
+        }catch{ /* Use the other server only when the first is unavailable. */ }
+      }
+      if(!groups)throw Error('Terrain servers unavailable');
+      let [kind,...sectors]=groups;
+      if(kind==='unknown'){
+        const known=sectors.filter(value=>value!=='unknown');
+        if(known.length>=3){
+          const counts={field:0,urban:0,forest:0};
+          for(const value of known)counts[value]++;
+          kind=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+        }
+      }
       terrainFix={point,kind,sectors,at:Date.now()};
       let changed=false;
       for(const saved of points){
-        if(saved[2]==='unknown'&&map.distance(saved,point)<150){
+        if(saved[2]==='unknown'&&kind!=='unknown'&&map.distance(saved,point)<220){
           saved[2]=kind;saved[3]=sectors;changed=true;
         }
       }
@@ -528,7 +587,7 @@
       if(lastFix){const current=terrainFor(lastFix.point);updateTerrainLabel(current.kind,current.sectors);}
     }catch{
       // Unknown places keep the narrow forest profile until a new lookup succeeds.
-      nextTerrainCheck=Date.now()+60000;
+      nextTerrainCheck=Date.now()+30000;
       if(lastFix){const current=terrainFor(lastFix.point);updateTerrainLabel(current.kind,current.sectors);}
     }finally{terrainPending=false;}
   }
@@ -547,11 +606,13 @@
     }
     if(!marker){marker=L.circleMarker(point,{radius:8,color:'#fff',weight:3,fillColor:'#dd785f',fillOpacity:1}).addTo(map);map.setView(point,15);}
     else marker.setLatLng(point);
+    if(followPosition&&!worldActive&&(!lastFix||distance>=5))
+      map.panTo(point,{animate:true,duration:.35});
     if(worldActive)renderWorld();
     setCountry({lat,lng:lon});
     const terrain=terrainFor(point);
     updateTerrainLabel(terrain.kind,terrain.sectors);
-    if(distance>=80){
+    if(distance>=35){
       // Short plausible gaps form a corridor; long gaps only reveal endpoints.
       if(lastFix&&distance<=2000&&seconds>0&&seconds<=120){
         const steps=Math.ceil(distance/250);
@@ -580,5 +641,5 @@
     $('status').textContent='Laukiama buvimo vietos leidimo ir pirmojo GPS matavimo…';
   };
   $('stop').onclick=()=>{stop();$('status').textContent='Tyrinėjimas sustabdytas. Atrastos vietos išsaugotos.';};
-  $('recenter').onclick=()=>{if(marker){if(worldActive)renderWorld(true);else map.flyTo(marker.getLatLng(),Math.max(map.getZoom(),15),{duration:.6});}else $('status').textContent='Pirmiausia pradėk tyrinėjimą ir leisk nustatyti vietą.';};
+  $('recenter').onclick=()=>{if(marker){followPosition=true;$('countryPicker').hidden=true;if(worldActive)renderWorld(true);else map.flyTo(marker.getLatLng(),Math.max(map.getZoom(),15),{duration:.6});}else $('status').textContent='Pirmiausia pradėk tyrinėjimą ir leisk nustatyti vietą.';};
 })();
