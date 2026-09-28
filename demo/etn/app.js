@@ -118,7 +118,7 @@
   }
   async function loadCountries(){
     try{
-      const response=await fetch('data/countries-50m.geojson.gz');
+      const response=await fetch('data/countries-50m.bin');
       if(!response.ok)throw Error('Country boundaries unavailable');
       const stream=response.body.pipeThrough(new DecompressionStream('gzip'));
       const data=JSON.parse(await new Response(stream).text());
