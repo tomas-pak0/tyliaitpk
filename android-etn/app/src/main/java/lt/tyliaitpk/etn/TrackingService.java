@@ -99,10 +99,11 @@ public class TrackingService extends Service implements LocationListener {
             String landuse=tags.optString("landuse"),natural=tags.optString("natural");
             if("forest".equals(landuse)||"wood".equals(natural)||"trees".equals(tags.optString("landcover")))forest=true;
             if("residential".equals(landuse)||"commercial".equals(landuse)||"industrial".equals(landuse)||
-                "retail".equals(landuse)||"construction".equals(landuse)||"garages".equals(landuse)||tags.has("building"))urban=true;
+                "retail".equals(landuse)||"construction".equals(landuse)||"garages".equals(landuse))urban=true;
             if("farmland".equals(landuse)||"farmyard".equals(landuse)||"meadow".equals(landuse)||
                 "orchard".equals(landuse)||"vineyard".equals(landuse)||"allotments".equals(landuse)||
-                "grass".equals(landuse)||"grassland".equals(natural)||"heath".equals(natural))field=true;
+                "grass".equals(landuse)||"greenfield".equals(landuse)||"grassland".equals(natural)||
+                "heath".equals(natural)||"scrub".equals(natural)||"grass".equals(tags.optString("landcover")))field=true;
             if("count".equals(element.optString("type")))buildings=tags.optInt("total",0);
         }
         return forest?"forest":urban||buildings>=8?"urban":field?"field":"unknown";
@@ -149,6 +150,8 @@ public class TrackingService extends Service implements LocationListener {
                 }
                 if("unknown".equals(kind)&&counts[0]+counts[1]+counts[2]>=3)
                     kind=counts[0]>=counts[1]&&counts[0]>=counts[2]?"field":counts[1]>=counts[2]?"urban":"forest";
+                if(!"unknown".equals(kind))for(int i=0;i<8;i++)
+                    if("unknown".equals(sectors.getString(i)))sectors.put(i,kind);
                 return new TerrainFix(lat,lon,kind,sectors);
             }catch(Exception ignored){}finally{if(conn!=null)conn.disconnect();}
         }
@@ -236,8 +239,15 @@ public class TrackingService extends Service implements LocationListener {
                 for (String provider : new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER}) {
                     try {
                         if (locations.isProviderEnabled(provider))
-                            locations.requestLocationUpdates(provider, 3000L, 20f, this, Looper.getMainLooper());
+                            locations.requestLocationUpdates(provider, 10000L, 0f, this, Looper.getMainLooper());
                     } catch (IllegalArgumentException | SecurityException ignored) {}
+                }
+                for(String provider:new String[]{LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER}){
+                    try{
+                        Location last=locations.getLastKnownLocation(provider);
+                        if(last!=null&&System.currentTimeMillis()-last.getTime()<120000&&
+                            last.hasAccuracy()&&last.getAccuracy()<=100f)onLocationChanged(last);
+                    }catch(SecurityException ignored){}
                 }
             }
             setRunning(true);

@@ -6,9 +6,10 @@
   const PROFILES={
     field:{radius:1000,clear:250,label:'Laukai',radiusLabel:'1 km'},
     urban:{radius:500,clear:250,label:'Užstatyta',radiusLabel:'0,5 km'},
-    forest:{radius:250,clear:100,label:'Miškas',radiusLabel:'0,25 km'}
+    forest:{radius:250,clear:100,label:'Miškas',radiusLabel:'0,25 km'},
+    unknown:{radius:500,clear:250,label:'Nežinoma',radiusLabel:'0,5 km'}
   };
-  const profile=kind=>PROFILES[kind]||PROFILES.forest;
+  const profile=kind=>PROFILES[kind]||PROFILES.unknown;
   const $=id=>document.getElementById(id);
   const {t,locale}=window.ETNI18n;
   const native=window.ETNNative||null;
@@ -494,8 +495,8 @@
   function classify(elements){
     const tags=elements.filter(e=>e.type!=='count').map(e=>e.tags||{});
     if(tags.some(t=>t.landuse==='forest'||t.natural==='wood'||t.landcover==='trees'))return 'forest';
-    if(tags.some(t=>['residential','commercial','industrial','retail','construction','garages'].includes(t.landuse)||t.building))return 'urban';
-    if(tags.some(t=>['farmland','farmyard','meadow','orchard','vineyard','allotments','grass'].includes(t.landuse)||['grassland','heath'].includes(t.natural)))return 'field';
+    if(tags.some(t=>['residential','commercial','industrial','retail','construction','garages'].includes(t.landuse)))return 'urban';
+    if(tags.some(t=>['farmland','farmyard','meadow','orchard','vineyard','allotments','grass','greenfield'].includes(t.landuse)||['grassland','heath','scrub'].includes(t.natural)||t.landcover==='grass'))return 'field';
     const count=elements.find(e=>e.type==='count');
     if(Number(count?.tags?.total)>=8)return 'urban';
     return 'unknown';
@@ -574,6 +575,9 @@
           kind=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
         }
       }
+      // A mapped central land use continues through unmapped directions;
+      // an actual forest or settlement sample still keeps its own radius.
+      if(kind!=='unknown')sectors=sectors.map(value=>value==='unknown'?kind:value);
       terrainFix={point,kind,sectors,at:Date.now()};
       let changed=false;
       for(const saved of points){
@@ -588,7 +592,7 @@
       }
       if(lastFix){const current=terrainFor(lastFix.point);updateTerrainLabel(current.kind,current.sectors);}
     }catch{
-      // Unknown places keep the narrow forest profile until a new lookup succeeds.
+      // A failed lookup remains unknown with a neutral radius, not forest.
       nextTerrainCheck=Date.now()+30000;
       if(lastFix){const current=terrainFor(lastFix.point);updateTerrainLabel(current.kind,current.sectors);}
     }finally{terrainPending=false;}
@@ -626,7 +630,7 @@
       save(lat,lon,terrain.kind,terrain.sectors);lastFix={point,time:now};
       $('status').textContent=t('exploringSaved');
     }else $('status').textContent=t('locationWaiting');
-    if(!fromNative)checkTerrain(point);
+    if(!fromNative||terrain.kind==='unknown')checkTerrain(point);
     if(!worldActive)$('mapLabel').textContent=t('discovering');
   }
   function stop(){
@@ -660,7 +664,7 @@
       if(acknowledged)native.ackFixes(acknowledged);
       if(lastFix&&followPosition&&!worldActive)map.setView(lastFix.point,map.getZoom(),{animate:false});
       if(worldActive)renderWorld(true);
-      if(lastFix&&!native)checkTerrain(lastFix.point);
+      if(lastFix&&terrainFor(lastFix.point).kind==='unknown')checkTerrain(lastFix.point);
       if(fixes.length===1000)setTimeout(syncNative,0);
     }catch{ /* Keep the native queue untouched so it can be retried. */ }
   }
@@ -673,6 +677,8 @@
     setInterval(syncNative,2000);
     syncNative();
   }
+  // Recheck even when GPS reports no movement and no new point is recorded.
+  setInterval(()=>{if(lastFix&&watcher!==null)checkTerrain(lastFix.point);},60000);
   $('start').onclick=()=>{
     if(watcher!==null)return;
     if(native){
