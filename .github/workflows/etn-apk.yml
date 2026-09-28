@@ -27,12 +27,12 @@ jobs:
         run: |
           mkdir -p android-etn/app/src/main/assets
           cp demo/etn/index.html demo/etn/style.css demo/etn/app.js android-etn/app/src/main/assets/
-          cp -R demo/etn/vendor android-etn/app/src/main/assets/
+          cp -R demo/etn/vendor demo/etn/data android-etn/app/src/main/assets/
       - name: Build debug APK
         working-directory: android-etn
         run: gradle --no-daemon :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: ETN-0.2.4-debug
+          name: ETN-0.3.0-debug
           path: android-etn/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

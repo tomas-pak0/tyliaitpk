@@ -37,6 +37,190 @@
   }
   let points=load(),loops=loadLoops(),trail=[],watcher=null,lastFix=null,marker=null,queued=false;
   let terrainFix=null,terrainPending=false,nextTerrainCheck=0;
+  let countries=[],currentCountry=null,progressTimer=null,progressRevision=0;
+  const borderPane=map.createPane('countryBorders');
+  borderPane.style.zIndex='650';borderPane.style.pointerEvents='none';
+  const borders=L.layerGroup().addTo(map);
+  const countryNames=typeof Intl.DisplayNames==='function'
+    ?new Intl.DisplayNames(['lt'],{type:'region'}):null;
+  const countryName=feature=>{
+    const code=feature.properties.code;
+    return /^[A-Z]{2}$/.test(code||'')&&countryNames
+      ?countryNames.of(code):feature.properties.name;
+  };
+  const countryFlag=code=>/^[A-Z]{2}$/.test(code||'')
+    ?String.fromCodePoint(...[...code].map(letter=>127397+letter.charCodeAt(0))):'🌐';
+  function rings(feature){
+    const g=feature.geometry;
+    return g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];
+  }
+  function inRing(lon,lat,ring){
+    let inside=false;
+    for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+      const [xi,yi]=ring[i],[xj,yj]=ring[j];
+      if((yi>lat)!==(yj>lat)&&lon<(xj-xi)*(lat-yi)/(yj-yi)+xi)inside=!inside;
+    }
+    return inside;
+  }
+  function inCountry(lon,lat,feature){
+    const [west,south,east,north]=feature.bounds;
+    if(lon<west||lon>east||lat<south||lat>north)return false;
+    return rings(feature).some(polygon=>inRing(lon,lat,polygon[0])&&
+      !polygon.slice(1).some(hole=>inRing(lon,lat,hole)));
+  }
+  function sphericalArea(ring){
+    let sum=0;
+    for(let i=0;i<ring.length-1;i++){
+      const a=ring[i],b=ring[i+1];
+      let delta=(b[0]-a[0])*Math.PI/180;
+      if(delta>Math.PI)delta-=2*Math.PI;
+      if(delta< -Math.PI)delta+=2*Math.PI;
+      sum+=delta*(Math.sin(a[1]*Math.PI/180)+Math.sin(b[1]*Math.PI/180));
+    }
+    return Math.abs(sum)*6371008.8**2/2;
+  }
+  function prepareCountry(feature){
+    const bounds=[180,90,-180,-90];
+    let area=0;
+    for(const polygon of rings(feature)){
+      for(let i=0;i<polygon.length;i++){
+        const ring=polygon[i];
+        area+=(i===0?1:-1)*sphericalArea(ring);
+        for(const [lon,lat] of ring){
+          bounds[0]=Math.min(bounds[0],lon);bounds[1]=Math.min(bounds[1],lat);
+          bounds[2]=Math.max(bounds[2],lon);bounds[3]=Math.max(bounds[3],lat);
+        }
+      }
+    }
+    feature.bounds=bounds;feature.area=Math.max(area,1);
+    return feature;
+  }
+  function updateBorders(){
+    borders.clearLayers();
+    if(!countries.length)return;
+    const visible=map.getBounds();
+    for(const feature of countries){
+      const [west,south,east,north]=feature.bounds;
+      if(!visible.intersects([[south,west],[north,east]]))continue;
+      L.geoJSON(feature,{pane:'countryBorders',interactive:false,style:{
+        color:feature===currentCountry?'#fa9b83':'#e78371',
+        weight:feature===currentCountry?2.5:1.3,opacity:feature===currentCountry?.9:.65,
+        fill:false
+      }}).addTo(borders);
+    }
+  }
+  map.on('moveend',updateBorders);
+  function findCountry(point){
+    // Prefer the previous country on a shared border to avoid label flicker.
+    const [lat,lon]=point;
+    if(currentCountry&&inCountry(lon,lat,currentCountry))return currentCountry;
+    return countries.find(feature=>inCountry(lon,lat,feature))||null;
+  }
+  async function loadCountries(){
+    try{
+      const response=await fetch('data/countries-50m.geojson.gz');
+      if(!response.ok)throw Error('Country boundaries unavailable');
+      const stream=response.body.pipeThrough(new DecompressionStream('gzip'));
+      const data=JSON.parse(await new Response(stream).text());
+      if(data.type!=='FeatureCollection'||!Array.isArray(data.features))throw Error('Invalid borders');
+      countries=data.features.map(prepareCountry);
+      if(marker)setCountry(marker.getLatLng());
+      updateBorders();
+    }catch{
+      $('country').textContent='Ribų duomenys nepasiekiami';
+      $('countryProgress').textContent='–';
+    }
+  }
+  function setCountry(point){
+    if(!countries.length)return;
+    const found=findCountry([point.lat,point.lng]);
+    if(found===currentCountry)return;
+    currentCountry=found;
+    $('country').textContent=found?countryName(found):'Už šalių ribų';
+    $('countryFlag').textContent=found?countryFlag(found.properties.code):'🌐';
+    $('countryProgress').textContent=found?'Skaičiuojama…':'–';
+    updateBorders();scheduleProgress();
+  }
+  function pointVisibility(distance,angle,sectors){
+    const position=(angle+Math.PI*2)%(Math.PI*2)/(Math.PI/4);
+    const before=Math.floor(position)%8,after=(before+1)%8;
+    const t=position-Math.floor(position),blend=t*t*(3-2*t);
+    const value=kind=>{
+      const config=profile(kind);
+      if(distance<=config.clear)return 1;
+      if(distance>=config.radius)return 0;
+      return (config.radius-distance)/(config.radius-config.clear);
+    };
+    return value(sectors[before])*(1-blend)+value(sectors[after])*blend;
+  }
+  function exploredPercent(feature){
+    // A 100 m grid approximates the union of all visibility masks. Each cell
+    // retains its greatest visibility, matching the on-screen fog composition.
+    const [west,south,east,north]=feature.bounds;
+    const baseLat=(south+north)/2,cosBase=Math.max(.01,Math.cos(baseLat*Math.PI/180));
+    const step=100,metersPerDegree=111195;
+    const latAt=y=>south+(y+.5)*step/metersPerDegree;
+    const lonAt=x=>west+(x+.5)*step/(metersPerDegree*cosBase);
+    const cells=new Map();
+    const add=(x,y,visibility)=>{
+      if(visibility<=0)return;
+      const lon=lonAt(x),lat=latAt(y);
+      if(!inCountry(lon,lat,feature))return;
+      const key=x+','+y;
+      if(visibility>(cells.get(key)||0))cells.set(key,visibility);
+    };
+    for(const [lat,lon,kind='field',sectors] of points){
+      const maxRadius=Array.isArray(sectors)
+        ?Math.max(...sectors.map(s=>profile(s).radius)):profile(kind).radius;
+      if(lon<(west-maxRadius/100000)||lon>(east+maxRadius/100000)||
+        lat<(south-maxRadius/100000)||lat>(north+maxRadius/100000))continue;
+      const cx=(lon-west)*metersPerDegree*cosBase/step-.5;
+      const cy=(lat-south)*metersPerDegree/step-.5;
+      const reach=Math.ceil(maxRadius/step/cosBase)+1;
+      const types=Array.isArray(sectors)?sectors:Array(8).fill(kind);
+      for(let y=Math.floor(cy-reach);y<=Math.ceil(cy+reach);y++){
+        const sampleLat=latAt(y),dy=(sampleLat-lat)*metersPerDegree;
+        if(Math.abs(dy)>=maxRadius)continue;
+        const halfWidth=Math.sqrt(maxRadius**2-dy**2);
+        const lonFactor=metersPerDegree*Math.max(.01,Math.cos(sampleLat*Math.PI/180));
+        const left=Math.ceil((lon-halfWidth/lonFactor-west)*metersPerDegree*cosBase/step-.5);
+        const right=Math.floor((lon+halfWidth/lonFactor-west)*metersPerDegree*cosBase/step-.5);
+        for(let x=left;x<=right;x++){
+          const dx=(lonAt(x)-lon)*lonFactor,distance=Math.hypot(dx,dy);
+          add(x,y,pointVisibility(distance,Math.atan2(dx,dy),types));
+        }
+      }
+    }
+    for(const ring of loops){
+      const ys=ring.map(p=>p[0]),xs=ring.map(p=>p[1]);
+      const polygon=ring.map(([lat,lon])=>[lon,lat]);
+      const minX=Math.floor((Math.max(west,Math.min(...xs))-west)*metersPerDegree*cosBase/step);
+      const maxX=Math.ceil((Math.min(east,Math.max(...xs))-west)*metersPerDegree*cosBase/step);
+      const minY=Math.floor((Math.max(south,Math.min(...ys))-south)*metersPerDegree/step);
+      const maxY=Math.ceil((Math.min(north,Math.max(...ys))-south)*metersPerDegree/step);
+      for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+        if(inRing(lonAt(x),latAt(y),polygon))add(x,y,1);
+      }
+    }
+    let revealed=0;
+    for(const [key,visibility] of cells){
+      const y=Number(key.slice(key.indexOf(',')+1));
+      revealed+=visibility*step*step*Math.cos(latAt(y)*Math.PI/180)/cosBase;
+    }
+    return Math.min(100,100*revealed/feature.area);
+  }
+  function scheduleProgress(){
+    clearTimeout(progressTimer);
+    const revision=++progressRevision,feature=currentCountry;
+    if(!feature)return;
+    progressTimer=setTimeout(()=>{
+      if(revision!==progressRevision)return;
+      const value=exploredPercent(feature);
+      $('countryProgress').textContent=value===0?'0 %':
+        value.toLocaleString('lt-LT',{minimumFractionDigits:5,maximumFractionDigits:5})+' %';
+    },300);
+  }
+  loadCountries();
   $('count').textContent=String(points.length);
   const canvas=document.createElement('canvas');
   canvas.className='fog-canvas';canvas.setAttribute('aria-hidden','true');
@@ -162,6 +346,7 @@
     if(trail.length>1500)trail.shift();
     detectEnclosure();
     redraw();
+    scheduleProgress();
   }
   function ringArea(ring){
     const origin=ring[0],cos=Math.cos(origin[0]*Math.PI/180);
@@ -259,6 +444,7 @@
       if(changed){
         try{localStorage.setItem(KEY,JSON.stringify(points));}catch{}
         redraw();
+        scheduleProgress();
       }
       if(lastFix){const current=terrainFor(lastFix.point);updateTerrainLabel(current.kind,current.sectors);}
     }catch{
@@ -282,6 +468,7 @@
     }
     if(!marker){marker=L.circleMarker(point,{radius:8,color:'#fff',weight:3,fillColor:'#dd785f',fillOpacity:1}).addTo(map);map.setView(point,15);}
     else marker.setLatLng(point);
+    setCountry({lat,lng:lon});
     const terrain=terrainFor(point);
     updateTerrainLabel(terrain.kind,terrain.sectors);
     if(distance>=80){
