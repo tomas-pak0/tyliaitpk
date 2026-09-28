@@ -3,13 +3,16 @@
   'use strict';
   const KEY='etn-explored-v1', LOOPS_KEY='etn-enclosed-v1';
   const MAX_ACCURACY=100, MAX_POINTS=5000, MAX_LOOPS=100;
+  const MAX_RADIUS=7000, SEARCH_DISTANCES=[125,250,500,1000,2000,3500,5000,7000];
   const PROFILES={
     field:{radius:1000,clear:250,label:'Laukai',radiusLabel:'1 km'},
     urban:{radius:500,clear:250,label:'Užstatyta',radiusLabel:'0,5 km'},
     forest:{radius:250,clear:100,label:'Miškas',radiusLabel:'0,25 km'},
-    unknown:{radius:500,clear:250,label:'Nežinoma',radiusLabel:'0,5 km'}
+    unknown:{radius:250,clear:100,label:'Nežinoma',radiusLabel:'0,25 km'}
   };
-  const profile=kind=>PROFILES[kind]||PROFILES.unknown;
+  const profile=kind=>typeof kind==='number'&&Number.isFinite(kind)
+    ?{radius:Math.max(250,Math.min(MAX_RADIUS,kind)),clear:Math.min(250,Math.max(100,kind/2))}
+    :PROFILES[kind]||PROFILES.unknown;
   const $=id=>document.getElementById(id);
   const {t,locale}=window.ETNI18n;
   const native=window.ETNNative||null;
@@ -26,7 +29,8 @@
         Number.isFinite(p[1])&&Math.abs(p[0])<=90&&Math.abs(p[1])<=180&&
         (p.length===2||['field','urban','forest','unknown'].includes(p[2]))&&
         (p.length!==4||(Array.isArray(p[3])&&p[3].length===8&&
-          p[3].every(kind=>['field','urban','forest','unknown'].includes(kind))))):[];
+          p[3].every(kind=>['field','urban','forest','unknown'].includes(kind)||
+            (Number.isFinite(kind)&&kind>=250&&kind<=MAX_RADIUS))))):[];
     }catch{return [];}
   }
   function loadLoops(){
@@ -183,7 +187,7 @@
     // retains its greatest visibility, matching the on-screen fog composition.
     const [west,south,east,north]=feature.bounds;
     const baseLat=(south+north)/2,cosBase=Math.max(.01,Math.cos(baseLat*Math.PI/180));
-    const step=100,metersPerDegree=111195;
+    const step=250,metersPerDegree=111195;
     const latAt=y=>south+(y+.5)*step/metersPerDegree;
     const lonAt=x=>west+(x+.5)*step/(metersPerDegree*cosBase);
     const cells=new Map();
@@ -197,11 +201,11 @@
     for(const [lat,lon,kind='field',sectors] of points){
       const maxRadius=Array.isArray(sectors)
         ?Math.max(...sectors.map(s=>profile(s).radius)):profile(kind).radius;
-      if(lon<(west-maxRadius/100000)||lon>(east+maxRadius/100000)||
-        lat<(south-maxRadius/100000)||lat>(north+maxRadius/100000))continue;
+      if(lon<(west-maxRadius/(111195*cosBase))||lon>(east+maxRadius/(111195*cosBase))||
+        lat<(south-maxRadius/111195)||lat>(north+maxRadius/111195))continue;
       const cx=(lon-west)*metersPerDegree*cosBase/step-.5;
       const cy=(lat-south)*metersPerDegree/step-.5;
-      const reach=Math.ceil(maxRadius/step/cosBase)+1;
+      const reach=Math.ceil(maxRadius/step)+1;
       const types=Array.isArray(sectors)?sectors:Array(8).fill(kind);
       for(let y=Math.floor(cy-reach);y<=Math.ceil(cy+reach);y++){
         const sampleLat=latAt(y),dy=(sampleLat-lat)*metersPerDegree;
@@ -343,7 +347,7 @@
       coverageCtx.restore();
     }
     // A walked, closed ring reveals everything it surrounds, even where
-    // the individual 1 km clearings leave fog in the middle.
+    // individual directional clearings leave fog in the middle.
     coverageCtx.fillStyle='#fff';
     for(const ring of loops){
       coverageCtx.beginPath();
@@ -546,9 +550,11 @@
   async function checkTerrain(point){
     const now=Date.now();
     if(terrainPending||now<nextTerrainCheck||
-      (terrainFix&&terrainFix.kind!=='unknown'&&now-terrainFix.at<75000&&map.distance(point,terrainFix.point)<100))return;
+      (terrainFix&&now-terrainFix.at<(terrainFix.kind==='unknown'?300000:900000)&&
+        map.distance(point,terrainFix.point)<100))return;
     terrainPending=true;nextTerrainCheck=now+15000;
-    const samples=[point,...Array.from({length:8},(_,i)=>directionPoint(point,300,i))];
+    const samples=[point,...Array.from({length:8},(_,i)=>
+      SEARCH_DISTANCES.map(distance=>directionPoint(point,distance,i))).flat()];
     const query=terrainQuery(samples);
     try{
       let groups=null;
@@ -557,7 +563,7 @@
         try{
           const response=await fetch(endpoint,{
             method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-            body:'data='+encodeURIComponent(query),signal:AbortSignal.timeout(18000)
+            body:'data='+encodeURIComponent(query),signal:AbortSignal.timeout(50000)
           });
           if(!response.ok)throw Error('Overpass '+response.status);
           const data=await response.json();
@@ -566,22 +572,20 @@
         }catch{ /* Use the other server only when the first is unavailable. */ }
       }
       if(!groups)throw Error('Terrain servers unavailable');
-      let [kind,...sectors]=groups;
-      if(kind==='unknown'){
-        const known=sectors.filter(value=>value!=='unknown');
-        if(known.length>=3){
-          const counts={field:0,urban:0,forest:0};
-          for(const value of known)counts[value]++;
-          kind=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+      const kind=groups[0];
+      const sectors=Array.from({length:8},(_,i)=>{
+        if(kind==='forest'||kind==='unknown')return 250;
+        if(kind==='urban')return 500;
+        for(let j=0;j<SEARCH_DISTANCES.length;j++){
+          const value=groups[1+i*SEARCH_DISTANCES.length+j];
+          if(value!=='field')return Math.max(value==='urban'?500:250,SEARCH_DISTANCES[j]);
         }
-      }
-      // A mapped central land use continues through unmapped directions;
-      // an actual forest or settlement sample still keeps its own radius.
-      if(kind!=='unknown')sectors=sectors.map(value=>value==='unknown'?kind:value);
+        return MAX_RADIUS;
+      });
       terrainFix={point,kind,sectors,at:Date.now()};
       let changed=false;
       for(const saved of points){
-        if(saved[2]==='unknown'&&kind!=='unknown'&&map.distance(saved,point)<120){
+        if(map.distance(saved,point)<120){
           saved[2]=kind;saved[3]=sectors;changed=true;
         }
       }
@@ -592,7 +596,7 @@
       }
       if(lastFix){const current=terrainFor(lastFix.point);updateTerrainLabel(current.kind,current.sectors);}
     }catch{
-      // A failed lookup remains unknown with a neutral radius, not forest.
+      // A failed lookup keeps the conservative forest radius.
       nextTerrainCheck=Date.now()+30000;
       if(lastFix){const current=terrainFor(lastFix.point);updateTerrainLabel(current.kind,current.sectors);}
     }finally{terrainPending=false;}
