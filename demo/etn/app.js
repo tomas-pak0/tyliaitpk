@@ -30,7 +30,7 @@
           Number.isFinite(p[1])&&Math.abs(p[0])<=90&&Math.abs(p[1])<=180)):[];
     }catch{return [];}
   }
-  let points=load(),loops=loadLoops(),trail=[],watcher=null,lastFix=null,marker=null,queued=false;
+  let points=load(),loops=loadLoops(),trail=[],watcher=null,lastFix=null,latestPosition=null,marker=null,queued=false;
   let importing=false;
   try{localStorage.setItem(KEY,JSON.stringify(points))}catch{}
   let countries=[],currentCountry=null,progressTimer=null,lastProgressAt=0,progressCountry=null;
@@ -455,6 +455,7 @@
     if(lastFix&&seconds>0&&distance/seconds>70){
       $('status').textContent=t('gpsJump');return;
     }
+    latestPosition=point;
     if(render&&!marker){marker=L.circleMarker(point,{radius:8,color:'#fff',weight:3,fillColor:'#dd785f',fillOpacity:1}).addTo(map);map.setView(point,15);}
     else if(render)marker.setLatLng(point);
     if(render&&followPosition&&!worldActive&&!fromNative&&(!lastFix||distance>=5))
@@ -477,7 +478,7 @@
   function stop(){
     if(watcher===-1&&native)native.stopTracking();
     else if(watcher!==null)navigator.geolocation.clearWatch(watcher);
-    watcher=null;lastFix=null;trail=[];$('start').disabled=false;$('stop').disabled=true;
+    watcher=null;lastFix=null;latestPosition=null;trail=[];$('start').disabled=false;$('stop').disabled=true;
   }
   let nativeStartAt=0;
   function syncNative(){
@@ -489,7 +490,7 @@
         watcher=-1;$('start').disabled=true;$('stop').disabled=false;
         $('status').textContent=t('backgroundTracking');
       }else if(!tracking&&watcher===-1&&Date.now()-nativeStartAt>5000){
-        watcher=null;lastFix=null;trail=[];
+        watcher=null;lastFix=null;latestPosition=null;trail=[];
         $('start').disabled=false;$('stop').disabled=true;
         $('status').textContent=t('stopped');
       }
@@ -511,11 +512,15 @@
         catch{$('status').textContent=t('noStorage');return;}
         $('count').textContent=String(points.length);
         redraw();scheduleProgress();
-        if(marker&&lastFix)marker.setLatLng(lastFix.point);
-        if(lastFix)setCountry({lat:lastFix.point[0],lng:lastFix.point[1]});
+        if(latestPosition){
+          if(marker)marker.setLatLng(latestPosition);
+          else marker=L.circleMarker(latestPosition,{radius:8,color:'#fff',weight:3,fillColor:'#dd785f',fillOpacity:1}).addTo(map);
+          setCountry({lat:latestPosition[0],lng:latestPosition[1]});
+        }
         native.ackFixes(acknowledged);
       }
-      if(lastFix&&followPosition&&!worldActive)map.setView(lastFix.point,map.getZoom(),{animate:false});
+      if(latestPosition&&followPosition&&!worldActive)
+        map.setView(latestPosition,map.getZoom()<12?15:map.getZoom(),{animate:false});
       if(worldActive)renderWorld(true);
       if(fixes.length===1000)setTimeout(syncNative,0);
     }catch{ /* Keep the native queue untouched so it can be retried. */ }
