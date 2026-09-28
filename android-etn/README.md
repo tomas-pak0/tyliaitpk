@@ -1,10 +1,7 @@
 # ETN Android
 
-ETN v0.2.3 Android WebView apvalkalas. Lokalūs HTML, CSS ir JS failai imami iš demo/etn, su Android programos HTTPS kilmės imitacija. Žemėlapio plytelės kraunamos internetu, o vietovės tipui 8 kryptimis nustatyti užklausos siunčiamos „OpenStreetMap Overpass“. Kryptinių ir persidengiančių plotų rūkas piešiamas vientisai. Android paprašo GPS leidimo.
+ETN 0.4.0 apvalkalas su Android vietos tipo foreground paslauga. Programėlės sąsaja ir žemėlapis pateikiami per vietinį WebView HTTPS kilmės adresą. Lietuvių, latvių, lenkų, anglų, vokiečių, ispanų ir prancūzų kalbų pasirinkimas veikia ir neprisijungus prie tinklo; pirmoji kalba imama iš telefono nustatymų.
 
-Surinkimas iš repozitorijos šaknies:
+Paspaudus „Pradėti tyrinėjimą“, prašoma tikslios vietos ir pranešimų leidimų. Tik tada, kai programėlė yra ekrane, paleidžiama foreground paslauga. Ji rodo nuolatinę ETN piktogramą, fone renka tinkamus GPS taškus ir atsargiai tikrina vietovę per „Overpass“. Taškai laikinai saugomi privačiame Android faile ir sujungiami su jau egzistuojančia WebView localStorage istorija, kai programėlės langas vėl atidaromas. Tyrinėjimą galima sustabdyti programėlės mygtuku arba pranešimo veiksmu. Neleidus pranešimų Android 13+ pranešimų juostos piktograma nebus rodoma, nors fono paslauga gali veikti. Priverstinis sustabdymas sistemos nustatymuose ją nutraukia.
 
-1. Nukopijuoti demo/etn failus į android-etn/app/src/main/assets.
-2. Aplanke android-etn paleisti gradle :app:assembleDebug (Gradle 8.11.1, JDK 17, Android SDK 35).
-
-Tai debug APK, skirtas bandymams. Atrastos vietos saugomos programos WebView localStorage; ištrynus programos duomenis jos prarandamos. Fone vietos sekimo dar nėra.
+Surinkimas: iš repozitorijos šaknies perkelti demo/etn HTML, CSS, JS, i18n.js, vendor ir data į android-etn/app/src/main/assets, tada aplanke android-etn vykdyti `gradle :app:assembleDebug` (Gradle 8.11.1, JDK 17, Android SDK 35). Tai debug APK bandymams. Pašalinus programos duomenis dings vietoje saugoma istorija.

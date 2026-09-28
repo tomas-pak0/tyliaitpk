@@ -10,6 +10,8 @@
   };
   const profile=kind=>PROFILES[kind]||PROFILES.forest;
   const $=id=>document.getElementById(id);
+  const {t,locale}=window.ETNI18n;
+  const native=window.ETNNative||null;
   const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5}).setView([55.1694,23.8813],7);
   L.control.zoom({position:'bottomright'}).addTo(map);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
@@ -42,7 +44,7 @@
   let followPosition=true;
   const worldView=$('worldView'),worldCanvas=$('worldCanvas');
   const countryNames=typeof Intl.DisplayNames==='function'
-    ?new Intl.DisplayNames(['lt'],{type:'region'}):null;
+    ?new Intl.DisplayNames([locale],{type:'region'}):null;
   const countryName=feature=>{
     const code=feature.properties.code;
     return /^[A-Z]{2}$/.test(code||'')&&countryNames
@@ -117,7 +119,7 @@
       if(marker)setCountry(marker.getLatLng());
       updateBorders();
     }catch{
-      $('country').textContent='Ribų duomenys nepasiekiami';
+      $('country').textContent=t('bordersUnavailable');
       $('countryProgress').textContent='–';
     }
   }
@@ -126,9 +128,9 @@
     const found=findCountry([point.lat,point.lng]);
     if(found===currentCountry)return;
     currentCountry=found;
-    $('country').textContent=found?countryName(found):'Už šalių ribų';
+    $('country').textContent=found?countryName(found):t('outsideCountries');
     $('countryFlag').textContent=found?countryFlag(found.properties.code):'🌐';
-    $('countryProgress').textContent=found?'Skaičiuojama…':'–';
+    $('countryProgress').textContent=found?t('calculating'):'–';
     updateBorders();scheduleProgress();
   }
   function zoomToCountry(feature){
@@ -139,11 +141,11 @@
     const [west,south,east,north]=feature.bounds;
     map.invalidateSize();
     map.fitBounds([[south,west],[north,east]],{padding:[24,24],animate:true});
-    $('status').textContent='Rodoma '+countryName(feature)+'. Vietos sekimą grąžinsi paspaudęs taikinio mygtuką.';
+    $('status').textContent=t('viewingCountry',{country:countryName(feature)});
   }
   $('closeCountries').onclick=()=>{$('countryPicker').hidden=true;};
   $('countryCard').onclick=()=>{
-    if(!countries.length){$('status').textContent='Pirmiausia įkeliamos šalių ribos.';return;}
+    if(!countries.length){$('status').textContent=t('loadingBorders');return;}
     const visited=new Set();
     for(const [lat,lon] of points){
       const feature=countries.find(candidate=>inCountry(lon,lat,candidate));
@@ -239,7 +241,7 @@
       if(revision!==progressRevision)return;
       const value=exploredPercent(feature);
       $('countryProgress').textContent=value===0?'0 %':
-        value.toLocaleString('lt-LT',{minimumFractionDigits:5,maximumFractionDigits:5})+' %';
+        value.toLocaleString(locale,{minimumFractionDigits:5,maximumFractionDigits:5})+' %';
     },300);
   }
   loadCountries();
@@ -437,9 +439,9 @@
     worldView.hidden=!worldActive;
     document.querySelector('.map-shell').classList.toggle('world-active',worldActive);
     $('worldButton').textContent=worldActive?'↩':'◎';
-    $('worldButton').setAttribute('aria-label',worldActive?'Grįžti į vietos žemėlapį':'Rodyti visą pasaulį');
+    $('worldButton').setAttribute('aria-label',t(worldActive?'backToMap':'showWorld'));
     $('worldButton').setAttribute('aria-pressed',String(worldActive));
-    $('mapLabel').textContent=worldActive?'PASAULIO ŽEMĖLAPIS':marker?'ATRANDAMA TERITORIJA':'NEATRASTA TERITORIJA';
+    $('mapLabel').textContent=t(worldActive?'worldMap':marker?'discovering':'unexplored');
     if(worldActive)renderWorld(true);
     else map.invalidateSize();
   };
@@ -452,7 +454,7 @@
     points.push(entry);
     if(points.length>MAX_POINTS)points=points.slice(-MAX_POINTS);
     try{localStorage.setItem(KEY,JSON.stringify(points));}
-    catch{$('status').textContent='Įrenginyje pritrūko vietos istorijai išsaugoti.';}
+    catch{$('status').textContent=t('noStorage');}
     $('count').textContent=String(points.length);
     trail.push([lat,lon]);
     if(trail.length>1500)trail.shift();
@@ -484,7 +486,7 @@
       loops.push(ring);
       if(loops.length>MAX_LOOPS)loops.shift();
       try{localStorage.setItem(LOOPS_KEY,JSON.stringify(loops));}
-      catch{$('status').textContent='Nepavyko išsaugoti uždaros teritorijos.';}
+      catch{$('status').textContent=t('noEnclosedStorage');}
       trail=[current];
       return;
     }
@@ -502,9 +504,9 @@
     const config=profile(kind);
     const radii=Array.isArray(sectors)?sectors.map(s=>profile(s).radius):[config.radius];
     const smallest=Math.min(...radii),largest=Math.max(...radii);
-    const label=radius=>radius===1000?'1':radius===500?'0,5':'0,25';
+    const label=radius=>new Intl.NumberFormat(locale,{maximumFractionDigits:2}).format(radius/1000);
     $('radius').textContent=smallest===largest?label(largest)+' km':label(smallest)+'–'+label(largest)+' km';
-    $('terrain').textContent=(kind==='unknown'?'Nežinoma':config.label)+(smallest!==largest?' · mišru':'');
+    $('terrain').textContent=t(kind==='unknown'?'unknown':kind)+(smallest!==largest?' · '+t('mixed'):'');
   }
   function terrainFor(point){
     if(terrainFix&&terrainFix.kind!=='unknown'&&Date.now()-terrainFix.at<15*60000&&
@@ -591,18 +593,18 @@
       if(lastFix){const current=terrainFor(lastFix.point);updateTerrainLabel(current.kind,current.sectors);}
     }finally{terrainPending=false;}
   }
-  function onPosition(position){
+  function onPosition(position,fromNative=false,terrainHint=null){
     const {latitude:lat,longitude:lon,accuracy}=position.coords;
     if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return;
     $('accuracy').textContent=Number.isFinite(accuracy)?Math.round(accuracy)+' m':'–';
     if(!Number.isFinite(accuracy)||accuracy>MAX_ACCURACY){
-      $('status').textContent='Laukiama tikslesnės vietos (reikia iki 100 m tikslumo).';return;
+      $('status').textContent=t('locationAccuracyWaiting');return;
     }
     const point=[lat,lon],now=position.timestamp||Date.now();
     const distance=lastFix?map.distance(lastFix.point,point):Infinity;
     const seconds=lastFix?(now-lastFix.time)/1000:Infinity;
     if(lastFix&&seconds>0&&distance/seconds>70){
-      $('status').textContent='Staigus GPS šuolis ignoruotas; laukiama kito matavimo.';return;
+      $('status').textContent=t('gpsJump');return;
     }
     if(!marker){marker=L.circleMarker(point,{radius:8,color:'#fff',weight:3,fillColor:'#dd785f',fillOpacity:1}).addTo(map);map.setView(point,15);}
     else marker.setLatLng(point);
@@ -610,7 +612,8 @@
       map.panTo(point,{animate:true,duration:.35});
     if(worldActive)renderWorld();
     setCountry({lat,lng:lon});
-    const terrain=terrainFor(point);
+    const terrain=terrainHint&&['field','urban','forest'].includes(terrainHint.kind)
+      ?terrainHint:terrainFor(point);
     updateTerrainLabel(terrain.kind,terrain.sectors);
     if(distance>=35){
       // Short plausible gaps form a corridor; long gaps only reveal endpoints.
@@ -621,25 +624,70 @@
         }
       }
       save(lat,lon,terrain.kind,terrain.sectors);lastFix={point,time:now};
-      $('status').textContent='Tyrinėjama · atrasta vieta išsaugota šiame įrenginyje.';
-    }else $('status').textContent='Vieta nustatyta · laukiamas judėjimas.';
-    checkTerrain(point);
-    if(!worldActive)$('mapLabel').textContent='ATRANDAMA TERITORIJA';
+      $('status').textContent=t('exploringSaved');
+    }else $('status').textContent=t('locationWaiting');
+    if(!fromNative)checkTerrain(point);
+    if(!worldActive)$('mapLabel').textContent=t('discovering');
   }
   function stop(){
-    if(watcher!==null)navigator.geolocation.clearWatch(watcher);
+    if(watcher===-1&&native)native.stopTracking();
+    else if(watcher!==null)navigator.geolocation.clearWatch(watcher);
     watcher=null;lastFix=null;trail=[];$('start').disabled=false;$('stop').disabled=true;
+  }
+  let nativeStartAt=0;
+  function syncNative(){
+    if(!native)return;
+    try{
+      const tracking=native.isTracking();
+      if(tracking)nativeStartAt=0;
+      if(tracking&&watcher===null){
+        watcher=-1;$('start').disabled=true;$('stop').disabled=false;
+        $('status').textContent=t('backgroundTracking');
+      }else if(!tracking&&watcher===-1&&Date.now()-nativeStartAt>5000){
+        watcher=null;lastFix=null;trail=[];
+        $('start').disabled=false;$('stop').disabled=true;
+        $('status').textContent=t('stopped');
+      }
+      const fixes=JSON.parse(native.pendingFixes());
+      if(!Array.isArray(fixes)||!fixes.length)return;
+      let acknowledged=0;
+      for(const fix of fixes){
+        if(!Number.isFinite(fix.lat)||!Number.isFinite(fix.lon)||!Number.isFinite(fix.time))continue;
+        onPosition({coords:{latitude:fix.lat,longitude:fix.lon,accuracy:fix.accuracy},timestamp:fix.time},
+          true,{kind:fix.kind,sectors:fix.sectors});
+        acknowledged=fix.id;
+      }
+      if(acknowledged)native.ackFixes(acknowledged);
+      if(lastFix&&!native)checkTerrain(lastFix.point);
+      if(fixes.length===1000)setTimeout(syncNative,0);
+    }catch{ /* Keep the native queue untouched so it can be retried. */ }
+  }
+  window.ETNSyncNative=syncNative;
+  window.ETNTrackingStarted=()=>{$('status').textContent=t('backgroundTracking');syncNative();};
+  window.ETNTrackingDenied=()=>{watcher=null;$('start').disabled=false;$('stop').disabled=true;$('status').textContent=t('locationDenied');};
+  window.ETNNotificationDenied=()=>{$('status').textContent=t('notificationDenied');};
+  if(native){
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncNative();});
+    setInterval(syncNative,2000);
+    syncNative();
   }
   $('start').onclick=()=>{
     if(watcher!==null)return;
-    if(!navigator.geolocation){$('status').textContent='Šis įrenginys nepalaiko buvimo vietos nustatymo.';return;}
+    if(native){
+      watcher=-1;nativeStartAt=Date.now();
+      $('start').disabled=true;$('stop').disabled=false;
+      $('status').textContent=t('waitingGps');
+      try{native.startTracking();}catch{window.ETNTrackingDenied();}
+      return;
+    }
+    if(!navigator.geolocation){$('status').textContent=t('unsupportedGps');return;}
     watcher=navigator.geolocation.watchPosition(onPosition,error=>{
-      $('status').textContent=error.code===1?'Vietos leidimas nesuteiktas. Įjunk jį naršyklės nustatymuose.':'Vietos nustatyti nepavyko. Bandyk dar kartą.';
+      $('status').textContent=t(error.code===1?'locationDenied':'locationFailed');
       stop();
     },{enableHighAccuracy:true,maximumAge:0,timeout:20000});
     $('start').disabled=true;$('stop').disabled=false;
-    $('status').textContent='Laukiama buvimo vietos leidimo ir pirmojo GPS matavimo…';
+    $('status').textContent=t('waitingGps');
   };
-  $('stop').onclick=()=>{stop();$('status').textContent='Tyrinėjimas sustabdytas. Atrastos vietos išsaugotos.';};
-  $('recenter').onclick=()=>{if(marker){followPosition=true;$('countryPicker').hidden=true;if(worldActive)renderWorld(true);else map.flyTo(marker.getLatLng(),Math.max(map.getZoom(),15),{duration:.6});}else $('status').textContent='Pirmiausia pradėk tyrinėjimą ir leisk nustatyti vietą.';};
+  $('stop').onclick=()=>{stop();$('status').textContent=t('stopped');};
+  $('recenter').onclick=()=>{if(marker){followPosition=true;$('countryPicker').hidden=true;if(worldActive)renderWorld(true);else map.flyTo(marker.getLatLng(),Math.max(map.getZoom(),15),{duration:.6});}else $('status').textContent=t('noLocation');};
 })();

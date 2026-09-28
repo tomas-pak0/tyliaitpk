@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -21,10 +22,13 @@ import android.widget.FrameLayout;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final String ORIGIN = "https://appassets.androidplatform.net";
     private static final int LOCATION_REQUEST = 11;
+    private static final int TRACK_REQUEST = 12;
+    private static final int NOTIFICATION_REQUEST = 13;
     private WebView webView;
     private GeolocationPermissions.Callback pendingGeolocation;
     private String pendingOrigin;
@@ -52,6 +56,17 @@ public class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setGeolocationEnabled(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        webView.addJavascriptInterface(new Object() {
+            @JavascriptInterface public String deviceLanguage() { return Locale.getDefault().getLanguage(); }
+            @JavascriptInterface public boolean isTracking() { return TrackingService.isRunning(MainActivity.this); }
+            @JavascriptInterface public String pendingFixes() { return TrackingService.pendingFixes(MainActivity.this); }
+            @JavascriptInterface public void ackFixes(long lastId) { TrackingService.ackFixes(MainActivity.this, lastId); }
+            @JavascriptInterface public void startTracking() { runOnUiThread(() -> requestTracking()); }
+            @JavascriptInterface public void stopTracking() {
+                runOnUiThread(() -> startService(new Intent(MainActivity.this, TrackingService.class)
+                    .setAction(TrackingService.ACTION_STOP)));
+            }
+        }, "ETNNative");
         webView.setWebViewClient(new WebViewClient() {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
@@ -108,6 +123,24 @@ public class MainActivity extends Activity {
             || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
+    private void requestTracking() {
+        if (!hasLocation()) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION}, TRACK_REQUEST);
+        } else if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_REQUEST);
+        } else startTrackingService();
+    }
+    private void startTrackingService() {
+        try {
+            startForegroundService(new Intent(this, TrackingService.class));
+            webView.evaluateJavascript("window.ETNTrackingStarted&&window.ETNTrackingStarted()", null);
+        } catch (Exception ex) {
+            webView.evaluateJavascript("window.ETNTrackingDenied&&window.ETNTrackingDenied()", null);
+        }
+    }
+
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         if (requestCode == LOCATION_REQUEST && pendingGeolocation != null) {
@@ -115,6 +148,20 @@ public class MainActivity extends Activity {
             pendingGeolocation = null;
             pendingOrigin = null;
         }
+        if (requestCode == TRACK_REQUEST) {
+            if (hasLocation()) requestTracking();
+            else webView.evaluateJavascript("window.ETNTrackingDenied&&window.ETNTrackingDenied()", null);
+        }
+        if (requestCode == NOTIFICATION_REQUEST) {
+            startTrackingService();
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                webView.evaluateJavascript("window.ETNNotificationDenied&&window.ETNNotificationDenied()", null);
+        }
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (webView != null) webView.evaluateJavascript("window.ETNSyncNative&&window.ETNSyncNative()", null);
     }
 
     @Override public void onBackPressed() {

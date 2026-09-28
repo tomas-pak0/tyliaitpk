@@ -21,3 +21,5 @@ button.stat-country:hover,button.stat-country:focus-visible{border-color:#a7b1ac
 .country-options{display:grid;gap:6px}
 .country-options button{display:flex;gap:10px;align-items:center;width:100%;padding:11px;color:#eee;background:#22302d;border:1px solid #43544e;border-radius:8px;text-align:left;font-size:14px}
 @media(max-width:650px){.country-picker{left:15px;right:15px;max-width:none}}
+.header-tools{display:flex;align-items:center;gap:8px}.language-picker select{background:#17211f;color:#f4f3ef;border:1px solid #4c5b55;border-radius:8px;padding:8px 4px;font-weight:700;font-size:12px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+@media(max-width:470px){.header-tools .badge{display:none}.language-picker select{max-width:74px}}
