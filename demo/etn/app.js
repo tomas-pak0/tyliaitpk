@@ -511,13 +511,13 @@
   }
   function terrainFor(point){
     if(terrainFix&&terrainFix.kind!=='unknown'&&Date.now()-terrainFix.at<15*60000&&
-      map.distance(point,terrainFix.point)<400)
+      map.distance(point,terrainFix.point)<120)
       return {kind:terrainFix.kind,sectors:terrainFix.sectors};
     // Keep nearby classified samples useful while the next lookup is pending.
     for(let i=points.length-1;i>=0;i--){
       const saved=points[i];
       if(saved[2]&&saved[2]!=='unknown'&&Math.abs(saved[0]-point[0])<.004&&
-        Math.abs(saved[1]-point[1])<.007&&map.distance(point,saved)<300)
+        Math.abs(saved[1]-point[1])<.007&&map.distance(point,saved)<120)
         return {kind:saved[2],sectors:saved[3]||null};
     }
     return {kind:'unknown',sectors:null};
@@ -546,7 +546,7 @@
   async function checkTerrain(point){
     const now=Date.now();
     if(terrainPending||now<nextTerrainCheck||
-      (terrainFix&&terrainFix.kind!=='unknown'&&now-terrainFix.at<75000&&map.distance(point,terrainFix.point)<180))return;
+      (terrainFix&&terrainFix.kind!=='unknown'&&now-terrainFix.at<75000&&map.distance(point,terrainFix.point)<100))return;
     terrainPending=true;nextTerrainCheck=now+15000;
     const samples=[point,...Array.from({length:8},(_,i)=>directionPoint(point,300,i))];
     const query=terrainQuery(samples);
@@ -581,7 +581,7 @@
       terrainFix={point,kind,sectors,at:Date.now()};
       let changed=false;
       for(const saved of points){
-        if(saved[2]==='unknown'&&kind!=='unknown'&&map.distance(saved,point)<220){
+        if(saved[2]==='unknown'&&kind!=='unknown'&&map.distance(saved,point)<120){
           saved[2]=kind;saved[3]=sectors;changed=true;
         }
       }

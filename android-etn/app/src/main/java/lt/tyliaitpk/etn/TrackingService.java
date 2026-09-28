@@ -63,7 +63,7 @@ public class TrackingService extends Service implements LocationListener {
         TerrainFix old=terrainFix;
         long now=SystemClock.elapsedRealtime();
         if(terrainPending||now<nextTerrainAt||(old!=null&&System.currentTimeMillis()-old.at<120000&&
-            meters(old.lat,old.lon,location.getLatitude(),location.getLongitude())<250))return;
+            meters(old.lat,old.lon,location.getLatitude(),location.getLongitude())<120))return;
         terrainPending=true;nextTerrainAt=now+45000;
         final double lat=location.getLatitude(),lon=location.getLongitude();
         terrainWorker.execute(()->{
@@ -78,7 +78,7 @@ public class TrackingService extends Service implements LocationListener {
                         for(String line:lines){
                             try{
                                 JSONObject item=new JSONObject(line);
-                                if(!item.has("kind")&&meters(lat,lon,item.getDouble("lat"),item.getDouble("lon"))<250){
+                                if(!item.has("kind")&&meters(lat,lon,item.getDouble("lat"),item.getDouble("lon"))<120){
                                     item.put("kind",found.kind);item.put("sectors",found.sectors);
                                 }
                                 updated.append(item).append('\n');
@@ -268,7 +268,7 @@ public class TrackingService extends Service implements LocationListener {
                 fix.put("time", location.getTime());
                 TerrainFix known=terrainFix;
                 if(known!=null&&System.currentTimeMillis()-known.at<600000&&
-                    meters(known.lat,known.lon,location.getLatitude(),location.getLongitude())<450){
+                    meters(known.lat,known.lon,location.getLatitude(),location.getLongitude())<120){
                     fix.put("kind",known.kind);fix.put("sectors",known.sectors);
                 }
                 try (FileOutputStream output = new FileOutputStream(queue(this), true)) {
