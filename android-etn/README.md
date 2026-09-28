@@ -1,6 +1,6 @@
 # ETN Android
 
-ETN 0.5.0 apvalkalas su Android vietos tipo foreground paslauga. Programėlės sąsaja ir žemėlapis pateikiami per vietinį WebView HTTPS kilmės adresą. Lietuvių, latvių, lenkų, anglų, vokiečių, ispanų ir prancūzų kalbų pasirinkimas veikia ir neprisijungus prie tinklo; pirmoji kalba imama iš telefono nustatymų.
+ETN 0.5.1 apvalkalas su Android vietos tipo foreground paslauga. Programėlės sąsaja ir žemėlapis pateikiami per vietinį WebView HTTPS kilmės adresą. Lietuvių, latvių, lenkų, anglų, vokiečių, ispanų ir prancūzų kalbų pasirinkimas veikia ir neprisijungus prie tinklo; pirmoji kalba imama iš telefono nustatymų.
 
 Paspaudus „Pradėti tyrinėjimą“, prašoma tikslios vietos ir pranešimų leidimų. Tik tada, kai programėlė yra ekrane, paleidžiama foreground paslauga. Ji rodo nuolatinę ETN piktogramą, fone renka tinkamus GPS taškus ir atsargiai tikrina vietovę per „Overpass“. Taškai laikinai saugomi privačiame Android faile ir sujungiami su jau egzistuojančia WebView localStorage istorija, kai programėlės langas vėl atidaromas. Tyrinėjimą galima sustabdyti programėlės mygtuku arba pranešimo veiksmu. Neleidus pranešimų Android 13+ pranešimų juostos piktograma nebus rodoma, nors fono paslauga gali veikti. Priverstinis sustabdymas sistemos nustatymuose ją nutraukia.
 
@@ -11,3 +11,5 @@ Nuo 0.4.2 leidimo paketo ID yra `lt.tyliaitpk.etn.next`: jis įsidiegia greta an
 0.4.3 vietovė tikrinama gavus pirmą vietos nustatymą ir periodiškai stovint vietoje. Nepavykęs OSM nustatymas rodomas kaip „nežinoma“ su neutraliu 0,5 km spinduliu, o ne prilyginamas miškui. Tik aiškiai nustatyto miško kryptis yra 0,25 km; trūkstamas krypčių žymas papildo patvirtinta vietovė dabartiniame taške. Apgyvendinimui neužtenka vieno pavienio pastato.
 
 0.5.0 nustato kiekvienos krypties atstumą iki pirmo atpažinto miško, užstatymo arba nežinomos vietovės: mėginiai imami 125, 250, 500, 1000, 2000, 3500, 5000 ir 7000 m. Nežinoma vietovė vertinama kaip miškas, o atviras laukas be kliūčių gali pasiekti 7 km ribą. Tarp mėginių siauri objektai gali likti nepastebėti. Programos pavadinimas telefone yra ETN; paketo ID ir pasirašymo sertifikatas nesikeičia, todėl įdiegus ant 0.4.2 arba 0.4.3 išlieka šios programėlės istorija.
+
+0.5.1: Android GPS vietos atnaujinimai užsakomi ne rečiau kaip kas 2 s, be minimalaus judėjimo atstumo; faktinis dažnis priklauso nuo įrenginio ir signalo. Tyrinėjimo taškai saugomi pajudėjus 10 m, ilgesnis kelias interpoliuojamas kas 75 m. Seno formato (0.4.x) krypčių įrašai nekopijuojami į dabartinės vietos klasifikaciją: dabartinė vieta iš naujo tikrinama pagal 7 km logiką. Pats „Overpass“ aptikimas turi atskirą serverio bei talpyklos intervalą, todėl nevyksta kas 2 s. Ekrano apačioje rodoma versija.

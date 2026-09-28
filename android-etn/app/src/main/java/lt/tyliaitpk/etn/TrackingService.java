@@ -246,7 +246,7 @@ public class TrackingService extends Service implements LocationListener {
                 for (String provider : new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER}) {
                     try {
                         if (locations.isProviderEnabled(provider))
-                            locations.requestLocationUpdates(provider, 10000L, 0f, this, Looper.getMainLooper());
+                            locations.requestLocationUpdates(provider, 2000L, 0f, this, Looper.getMainLooper());
                     } catch (IllegalArgumentException | SecurityException ignored) {}
                 }
                 for(String provider:new String[]{LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER}){

@@ -520,7 +520,8 @@
     // Keep nearby classified samples useful while the next lookup is pending.
     for(let i=points.length-1;i>=0;i--){
       const saved=points[i];
-      if(saved[2]&&saved[2]!=='unknown'&&Math.abs(saved[0]-point[0])<.004&&
+      if(saved[2]&&saved[2]!=='unknown'&&Array.isArray(saved[3])&&
+        saved[3].every(Number.isFinite)&&Math.abs(saved[0]-point[0])<.004&&
         Math.abs(saved[1]-point[1])<.007&&map.distance(point,saved)<120)
         return {kind:saved[2],sectors:saved[3]||null};
     }
@@ -623,10 +624,10 @@
     const terrain=terrainHint&&['field','urban','forest'].includes(terrainHint.kind)
       ?terrainHint:terrainFor(point);
     updateTerrainLabel(terrain.kind,terrain.sectors);
-    if(distance>=35){
+    if(distance>=10){
       // Short plausible gaps form a corridor; long gaps only reveal endpoints.
       if(lastFix&&distance<=2000&&seconds>0&&seconds<=120){
-        const steps=Math.ceil(distance/250);
+        const steps=Math.ceil(distance/75);
         for(let i=1;i<steps;i++){
           const t=i/steps;save(lastFix.point[0]+(lat-lastFix.point[0])*t,lastFix.point[1]+(lon-lastFix.point[1])*t,terrain.kind,terrain.sectors);
         }
@@ -634,7 +635,7 @@
       save(lat,lon,terrain.kind,terrain.sectors);lastFix={point,time:now};
       $('status').textContent=t('exploringSaved');
     }else $('status').textContent=t('locationWaiting');
-    if(!fromNative||terrain.kind==='unknown')checkTerrain(point);
+    if(!fromNative)checkTerrain(point);
     if(!worldActive)$('mapLabel').textContent=t('discovering');
   }
   function stop(){
@@ -668,7 +669,7 @@
       if(acknowledged)native.ackFixes(acknowledged);
       if(lastFix&&followPosition&&!worldActive)map.setView(lastFix.point,map.getZoom(),{animate:false});
       if(worldActive)renderWorld(true);
-      if(lastFix&&terrainFor(lastFix.point).kind==='unknown')checkTerrain(lastFix.point);
+      if(lastFix)checkTerrain(lastFix.point);
       if(fixes.length===1000)setTimeout(syncNative,0);
     }catch{ /* Keep the native queue untouched so it can be retried. */ }
   }
