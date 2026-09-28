@@ -1,7 +1,9 @@
 # ETN Android
 
-ETN 0.4.1 apvalkalas su Android vietos tipo foreground paslauga. Programėlės sąsaja ir žemėlapis pateikiami per vietinį WebView HTTPS kilmės adresą. Lietuvių, latvių, lenkų, anglų, vokiečių, ispanų ir prancūzų kalbų pasirinkimas veikia ir neprisijungus prie tinklo; pirmoji kalba imama iš telefono nustatymų.
+ETN 0.4.2 apvalkalas su Android vietos tipo foreground paslauga. Programėlės sąsaja ir žemėlapis pateikiami per vietinį WebView HTTPS kilmės adresą. Lietuvių, latvių, lenkų, anglų, vokiečių, ispanų ir prancūzų kalbų pasirinkimas veikia ir neprisijungus prie tinklo; pirmoji kalba imama iš telefono nustatymų.
 
 Paspaudus „Pradėti tyrinėjimą“, prašoma tikslios vietos ir pranešimų leidimų. Tik tada, kai programėlė yra ekrane, paleidžiama foreground paslauga. Ji rodo nuolatinę ETN piktogramą, fone renka tinkamus GPS taškus ir atsargiai tikrina vietovę per „Overpass“. Taškai laikinai saugomi privačiame Android faile ir sujungiami su jau egzistuojančia WebView localStorage istorija, kai programėlės langas vėl atidaromas. Tyrinėjimą galima sustabdyti programėlės mygtuku arba pranešimo veiksmu. Neleidus pranešimų Android 13+ pranešimų juostos piktograma nebus rodoma, nors fono paslauga gali veikti. Priverstinis sustabdymas sistemos nustatymuose ją nutraukia.
 
 Surinkimas: iš repozitorijos šaknies perkelti demo/etn HTML, CSS, JS, i18n.js, vendor ir data į android-etn/app/src/main/assets, tada aplanke android-etn vykdyti `gradle :app:assembleDebug` (Gradle 8.11.1, JDK 17, Android SDK 35). Tai debug APK bandymams. Pašalinus programos duomenis dings vietoje saugoma istorija.
+
+0.4.2 leidimo paketo ID yra `lt.tyliaitpk.etn.next`: jis įsidiegia greta ankstesnės ETN programėlės, todėl jos sukaupti taškai lieka senojoje programėlėje. Naujoji programėlė pradeda atskirą istoriją. Viešai platinamas APK pasirašomas pastoviu privačiu raktu; GitHub Actions sugeneruotas `app-debug.apk` yra tik tarpinis surinkimo failas. Būsimi atnaujinimai privalo naudoti tą patį paketo ID ir pasirašymo sertifikatą (SHA-256 `a68cd0b8f2b8cfbe1af4ae7f5aa4cd57055e31dd3d2220ad1aa4b0d6ef371a94`). Privatus raktas nėra saugomas viešoje repozitorijoje.
