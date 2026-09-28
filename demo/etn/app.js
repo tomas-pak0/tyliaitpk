@@ -3,16 +3,7 @@
   'use strict';
   const KEY='etn-explored-v1', LOOPS_KEY='etn-enclosed-v1';
   const MAX_ACCURACY=100, MAX_POINTS=5000, MAX_LOOPS=100;
-  const MAX_RADIUS=7000, SEARCH_DISTANCES=[125,250,500,1000,2000,3500,5000,7000];
-  const PROFILES={
-    field:{radius:1000,clear:250,label:'Laukai',radiusLabel:'1 km'},
-    urban:{radius:500,clear:250,label:'Užstatyta',radiusLabel:'0,5 km'},
-    forest:{radius:250,clear:100,label:'Miškas',radiusLabel:'0,25 km'},
-    unknown:{radius:250,clear:100,label:'Nežinoma',radiusLabel:'0,25 km'}
-  };
-  const profile=kind=>typeof kind==='number'&&Number.isFinite(kind)
-    ?{radius:Math.max(250,Math.min(MAX_RADIUS,kind)),clear:Math.min(250,Math.max(100,kind/2))}
-    :PROFILES[kind]||PROFILES.unknown;
+  const MAX_RADIUS=7000, CLEAR_RADIUS=250;
   const $=id=>document.getElementById(id);
   const {t,locale}=window.ETNI18n;
   const native=window.ETNNative||null;
@@ -25,12 +16,9 @@
     try{
       const data=JSON.parse(localStorage.getItem(KEY)||'[]');
       return Array.isArray(data)?data.slice(-MAX_POINTS).filter(p=>
-        Array.isArray(p)&&(p.length===2||p.length===3||p.length===4)&&Number.isFinite(p[0])&&
-        Number.isFinite(p[1])&&Math.abs(p[0])<=90&&Math.abs(p[1])<=180&&
-        (p.length===2||['field','urban','forest','unknown'].includes(p[2]))&&
-        (p.length!==4||(Array.isArray(p[3])&&p[3].length===8&&
-          p[3].every(kind=>['field','urban','forest','unknown'].includes(kind)||
-            (Number.isFinite(kind)&&kind>=250&&kind<=MAX_RADIUS))))):[];
+        Array.isArray(p)&&p.length>=2&&Number.isFinite(p[0])&&
+        Number.isFinite(p[1])&&Math.abs(p[0])<=90&&Math.abs(p[1])<=180)
+        .map(p=>[p[0],p[1]]):[];
     }catch{return [];}
   }
   function loadLoops(){
@@ -43,8 +31,9 @@
     }catch{return [];}
   }
   let points=load(),loops=loadLoops(),trail=[],watcher=null,lastFix=null,marker=null,queued=false;
-  let terrainFix=null,terrainPending=false,nextTerrainCheck=0;
-  let countries=[],currentCountry=null,progressTimer=null,progressRevision=0;
+  let importing=false;
+  try{localStorage.setItem(KEY,JSON.stringify(points))}catch{}
+  let countries=[],currentCountry=null,progressTimer=null,lastProgressAt=0,progressCountry=null;
   let worldActive=false;
   let followPosition=true;
   const worldView=$('worldView'),worldCanvas=$('worldCanvas');
@@ -170,24 +159,17 @@
     $('countryPicker').hidden=false;
   };
   map.on('dragstart',()=>{followPosition=false;});
-  function pointVisibility(distance,angle,sectors){
-    const position=(angle+Math.PI*2)%(Math.PI*2)/(Math.PI/4);
-    const before=Math.floor(position)%8,after=(before+1)%8;
-    const t=position-Math.floor(position),blend=t*t*(3-2*t);
-    const value=kind=>{
-      const config=profile(kind);
-      if(distance<=config.clear)return 1;
-      if(distance>=config.radius)return 0;
-      return (config.radius-distance)/(config.radius-config.clear);
-    };
-    return value(sectors[before])*(1-blend)+value(sectors[after])*blend;
+  function pointVisibility(distance){
+    if(distance<=CLEAR_RADIUS)return 1;
+    if(distance>=MAX_RADIUS)return 0;
+    return (MAX_RADIUS-distance)/(MAX_RADIUS-CLEAR_RADIUS);
   }
   function exploredPercent(feature){
-    // A 100 m grid approximates the union of all visibility masks. Each cell
+    // A coarse grid approximates the union of all visibility masks. Each cell
     // retains its greatest visibility, matching the on-screen fog composition.
     const [west,south,east,north]=feature.bounds;
     const baseLat=(south+north)/2,cosBase=Math.max(.01,Math.cos(baseLat*Math.PI/180));
-    const step=250,metersPerDegree=111195;
+    const step=500,metersPerDegree=111195;
     const latAt=y=>south+(y+.5)*step/metersPerDegree;
     const lonAt=x=>west+(x+.5)*step/(metersPerDegree*cosBase);
     const cells=new Map();
@@ -198,15 +180,17 @@
       const key=x+','+y;
       if(visibility>(cells.get(key)||0))cells.set(key,visibility);
     };
-    for(const [lat,lon,kind='field',sectors] of points){
-      const maxRadius=Array.isArray(sectors)
-        ?Math.max(...sectors.map(s=>profile(s).radius)):profile(kind).radius;
+    const visited=new Set();
+    for(const [lat,lon] of points){
+      const maxRadius=MAX_RADIUS;
+      const bucket=Math.floor(lat*1112)+','+Math.floor(lon*1112*cosBase);
+      if(visited.has(bucket))continue;
+      visited.add(bucket);
       if(lon<(west-maxRadius/(111195*cosBase))||lon>(east+maxRadius/(111195*cosBase))||
         lat<(south-maxRadius/111195)||lat>(north+maxRadius/111195))continue;
       const cx=(lon-west)*metersPerDegree*cosBase/step-.5;
       const cy=(lat-south)*metersPerDegree/step-.5;
       const reach=Math.ceil(maxRadius/step)+1;
-      const types=Array.isArray(sectors)?sectors:Array(8).fill(kind);
       for(let y=Math.floor(cy-reach);y<=Math.ceil(cy+reach);y++){
         const sampleLat=latAt(y),dy=(sampleLat-lat)*metersPerDegree;
         if(Math.abs(dy)>=maxRadius)continue;
@@ -216,7 +200,7 @@
         const right=Math.floor((lon+halfWidth/lonFactor-west)*metersPerDegree*cosBase/step-.5);
         for(let x=left;x<=right;x++){
           const dx=(lonAt(x)-lon)*lonFactor,distance=Math.hypot(dx,dy);
-          add(x,y,pointVisibility(distance,Math.atan2(dx,dy),types));
+          add(x,y,pointVisibility(distance));
         }
       }
     }
@@ -239,15 +223,17 @@
     return Math.min(100,100*revealed/feature.area);
   }
   function scheduleProgress(){
-    clearTimeout(progressTimer);
-    const revision=++progressRevision,feature=currentCountry;
-    if(!feature)return;
+    if(!currentCountry)return;
+    if(progressTimer&&progressCountry===currentCountry)return;
+    clearTimeout(progressTimer);progressCountry=currentCountry;
     progressTimer=setTimeout(()=>{
-      if(revision!==progressRevision)return;
-      const value=exploredPercent(feature);
+      progressTimer=null;
+      if(!currentCountry)return;
+      lastProgressAt=Date.now();
+      const value=exploredPercent(currentCountry);
       $('countryProgress').textContent=value===0?'0 %':
         value.toLocaleString(locale,{minimumFractionDigits:5,maximumFractionDigits:5})+' %';
-    },300);
+    },Math.max(300,10000-(Date.now()-lastProgressAt)));
   }
   loadCountries();
   $('count').textContent=String(points.length);
@@ -261,60 +247,23 @@
   const borderCtx=borderCanvas.getContext('2d');
   const coverage=document.createElement('canvas');
   const coverageCtx=coverage.getContext('2d',{willReadFrequently:true});
-  const MASK_SIZE=512,MASK_CACHE_LIMIT=24,maskCache=new Map();
-  let polarGrid=null;
-  function getPolarGrid(){
-    if(polarGrid)return polarGrid;
-    const angles=new Float32Array(MASK_SIZE*MASK_SIZE);
-    const distances=new Float32Array(MASK_SIZE*MASK_SIZE);
-    const half=MASK_SIZE/2;
+  const MASK_SIZE=384;
+  let radialMask=null;
+  function getRadialMask(){
+    if(radialMask)return radialMask;
+    radialMask=document.createElement('canvas');
+    radialMask.width=radialMask.height=MASK_SIZE;
+    const c=radialMask.getContext('2d');
+    const image=c.createImageData(MASK_SIZE,MASK_SIZE);
     for(let y=0;y<MASK_SIZE;y++)for(let x=0;x<MASK_SIZE;x++){
-      const dx=(x+.5-half)/half,dy=(y+.5-half)/half,index=y*MASK_SIZE+x;
-      distances[index]=Math.hypot(dx,dy);
-      angles[index]=(Math.atan2(dx,-dy)+Math.PI*2)%(Math.PI*2)/(Math.PI/4);
+      const distance=Math.hypot(x+.5-MASK_SIZE/2,y+.5-MASK_SIZE/2)*MAX_RADIUS/(MASK_SIZE/2);
+      const value=Math.round(255*pointVisibility(distance));
+      const offset=(y*MASK_SIZE+x)*4;
+      image.data[offset]=image.data[offset+1]=image.data[offset+2]=value;
+      image.data[offset+3]=255;
     }
-    polarGrid={angles,distances};
-    return polarGrid;
-  }
-  function directionalMask(sectors){
-    const key=sectors.join(',');
-    if(maskCache.has(key)){
-      const cached=maskCache.get(key);
-      maskCache.delete(key);maskCache.set(key,cached);
-      return cached;
-    }
-    const configs=sectors.map(profile);
-    const maxRadius=Math.max(...configs.map(c=>c.radius));
-    const mask=document.createElement('canvas');
-    mask.width=mask.height=MASK_SIZE;
-    const maskContext=mask.getContext('2d');
-    const image=maskContext.createImageData(MASK_SIZE,MASK_SIZE);
-    const pixels=image.data,{angles,distances}=getPolarGrid();
-    for(let index=0;index<distances.length;index++){
-      const distance=distances[index]*maxRadius;
-      let visibility=0;
-      if(distance<=maxRadius){
-        const direction=angles[index];
-        const before=Math.floor(direction)%8,after=(before+1)%8;
-        const fraction=direction-Math.floor(direction);
-        const blend=fraction*fraction*(3-2*fraction);
-        const visibilityAt=config=>{
-          if(distance<=config.clear)return 1;
-          if(distance>=config.radius)return 0;
-          return (config.radius-distance)/(config.radius-config.clear);
-        };
-        visibility=visibilityAt(configs[before])*(1-blend)+
-          visibilityAt(configs[after])*blend;
-      }
-      const offset=index*4,value=Math.round(255*visibility);
-      pixels[offset]=pixels[offset+1]=pixels[offset+2]=value;
-      pixels[offset+3]=255;
-    }
-    maskContext.putImageData(image,0,0);
-    const result={canvas:mask,maxRadius};
-    maskCache.set(key,result);
-    if(maskCache.size>MASK_CACHE_LIMIT)maskCache.delete(maskCache.keys().next().value);
-    return result;
+    c.putImageData(image,0,0);
+    return radialMask;
   }
   function draw(){
     queued=false;
@@ -330,21 +279,17 @@
     coverageCtx.fillStyle='#000';
     coverageCtx.fillRect(0,0,size.x,size.y);
     coverageCtx.globalCompositeOperation='lighten';
-    for(const [lat,lon,kind='field',sectors] of points){
-      const config=profile(kind);
+    const shape=getRadialMask(),seen=new Set();
+    for(const [lat,lon] of points){
+      const cos=Math.max(.01,Math.cos(lat*Math.PI/180));
+      const bucket=Math.floor(lat*111195/75)+','+Math.floor(lon*111195*cos/75);
+      if(seen.has(bucket))continue;
+      seen.add(bucket);
       const p=map.latLngToContainerPoint([lat,lon]);
       const north=map.latLngToContainerPoint([lat+1000/111320,lon]);
-      const pxPerMeter=Math.abs(north.y-p.y)/1000;
-      const maxRadius=Array.isArray(sectors)
-        ?Math.max(...sectors.map(s=>profile(s).radius)):config.radius;
-      const outer=maxRadius*pxPerMeter;
-      if(outer<.3)continue;
-      if(p.x+outer<0||p.x-outer>size.x||p.y+outer<0||p.y-outer>size.y)continue;
-      const shape=directionalMask(Array.isArray(sectors)?sectors:Array(8).fill(kind));
-      coverageCtx.save();
-      coverageCtx.translate(p.x,p.y);
-      coverageCtx.drawImage(shape.canvas,-outer,-outer,2*outer,2*outer);
-      coverageCtx.restore();
+      const outer=MAX_RADIUS*Math.abs(north.y-p.y)/1000;
+      if(outer<.3||p.x+outer<0||p.x-outer>size.x||p.y+outer<0||p.y-outer>size.y)continue;
+      coverageCtx.drawImage(shape,p.x-outer,p.y-outer,2*outer,2*outer);
     }
     // A walked, closed ring reveals everything it surrounds, even where
     // individual directional clearings leave fog in the middle.
@@ -453,17 +398,16 @@
   window.addEventListener('resize',()=>{if(worldActive)renderWorld(true);});
   function redraw(){if(!queued){queued=true;requestAnimationFrame(draw);}}
   map.on('move zoom zoomanim zoomend resize viewreset',redraw);redraw();
-  function save(lat,lon,kind,sectors){
-    const entry=[lat,lon,kind];
-    if(Array.isArray(sectors))entry.push(sectors);
-    points.push(entry);
+  function save(lat,lon){
+    points.push([lat,lon]);
     if(points.length>MAX_POINTS)points=points.slice(-MAX_POINTS);
-    try{localStorage.setItem(KEY,JSON.stringify(points));}
-    catch{$('status').textContent=t('noStorage');}
-    $('count').textContent=String(points.length);
     trail.push([lat,lon]);
     if(trail.length>1500)trail.shift();
     detectEnclosure();
+    if(importing)return;
+    try{localStorage.setItem(KEY,JSON.stringify(points));}
+    catch{$('status').textContent=t('noStorage');}
+    $('count').textContent=String(points.length);
     redraw();
     if(worldActive)renderWorld();
     scheduleProgress();
@@ -496,113 +440,9 @@
       return;
     }
   }
-  function classify(elements){
-    const tags=elements.filter(e=>e.type!=='count').map(e=>e.tags||{});
-    if(tags.some(t=>t.landuse==='forest'||t.natural==='wood'||t.landcover==='trees'))return 'forest';
-    if(tags.some(t=>['residential','commercial','industrial','retail','construction','garages'].includes(t.landuse)))return 'urban';
-    if(tags.some(t=>['farmland','farmyard','meadow','orchard','vineyard','allotments','grass','greenfield'].includes(t.landuse)||['grassland','heath','scrub'].includes(t.natural)||t.landcover==='grass'))return 'field';
-    const count=elements.find(e=>e.type==='count');
-    if(Number(count?.tags?.total)>=8)return 'urban';
-    return 'unknown';
-  }
-  function updateTerrainLabel(kind,sectors){
-    const config=profile(kind);
-    const radii=Array.isArray(sectors)?sectors.map(s=>profile(s).radius):[config.radius];
-    const smallest=Math.min(...radii),largest=Math.max(...radii);
-    const label=radius=>new Intl.NumberFormat(locale,{maximumFractionDigits:2}).format(radius/1000);
-    $('radius').textContent=smallest===largest?label(largest)+' km':label(smallest)+'–'+label(largest)+' km';
-    $('terrain').textContent=t(kind==='unknown'?'unknown':kind)+(smallest!==largest?' · '+t('mixed'):'');
-  }
-  function terrainFor(point){
-    if(terrainFix&&terrainFix.kind!=='unknown'&&Date.now()-terrainFix.at<15*60000&&
-      map.distance(point,terrainFix.point)<120)
-      return {kind:terrainFix.kind,sectors:terrainFix.sectors};
-    // Keep nearby classified samples useful while the next lookup is pending.
-    for(let i=points.length-1;i>=0;i--){
-      const saved=points[i];
-      if(saved[2]&&saved[2]!=='unknown'&&Array.isArray(saved[3])&&
-        saved[3].every(Number.isFinite)&&Math.abs(saved[0]-point[0])<.004&&
-        Math.abs(saved[1]-point[1])<.007&&map.distance(point,saved)<120)
-        return {kind:saved[2],sectors:saved[3]||null};
-    }
-    return {kind:'unknown',sectors:null};
-  }
-  function directionPoint(point,meters,index){
-    const angle=index*Math.PI/4,cos=Math.max(.01,Math.cos(point[0]*Math.PI/180));
-    return [point[0]+meters*Math.cos(angle)/111320,
-      point[1]+meters*Math.sin(angle)/(111320*cos)];
-  }
-  function terrainQuery(samples){
-    return '[out:json][timeout:30];'+samples.map(([latitude,longitude])=>{
-      const lat=latitude.toFixed(6),lon=longitude.toFixed(6);
-      return 'is_in('+lat+','+lon+');out tags;'+
-        'nwr["building"](around:120,'+lat+','+lon+');out count;';
-    }).join('');
-  }
-  function parseSamples(elements,count){
-    const groups=[],group=[];
-    for(const item of elements){
-      group.push(item);
-      if(item.type==='count'){groups.push(group.splice(0));}
-    }
-    if(groups.length!==count||group.length)throw Error('Incomplete terrain samples');
-    return groups.map(classify);
-  }
-  async function checkTerrain(point){
-    const now=Date.now();
-    if(terrainPending||now<nextTerrainCheck||
-      (terrainFix&&now-terrainFix.at<(terrainFix.kind==='unknown'?300000:900000)&&
-        map.distance(point,terrainFix.point)<100))return;
-    terrainPending=true;nextTerrainCheck=now+15000;
-    const samples=[point,...Array.from({length:8},(_,i)=>
-      SEARCH_DISTANCES.map(distance=>directionPoint(point,distance,i))).flat()];
-    const query=terrainQuery(samples);
-    try{
-      let groups=null;
-      for(const endpoint of ['https://overpass-api.de/api/interpreter',
-        'https://overpass.kumi.systems/api/interpreter']){
-        try{
-          const response=await fetch(endpoint,{
-            method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-            body:'data='+encodeURIComponent(query),signal:AbortSignal.timeout(50000)
-          });
-          if(!response.ok)throw Error('Overpass '+response.status);
-          const data=await response.json();
-          if(!Array.isArray(data.elements))throw Error('Invalid Overpass response');
-          groups=parseSamples(data.elements,samples.length);break;
-        }catch{ /* Use the other server only when the first is unavailable. */ }
-      }
-      if(!groups)throw Error('Terrain servers unavailable');
-      const kind=groups[0];
-      const sectors=Array.from({length:8},(_,i)=>{
-        if(kind==='forest'||kind==='unknown')return 250;
-        if(kind==='urban')return 500;
-        for(let j=0;j<SEARCH_DISTANCES.length;j++){
-          const value=groups[1+i*SEARCH_DISTANCES.length+j];
-          if(value!=='field')return Math.max(value==='urban'?500:250,SEARCH_DISTANCES[j]);
-        }
-        return MAX_RADIUS;
-      });
-      terrainFix={point,kind,sectors,at:Date.now()};
-      let changed=false;
-      for(const saved of points){
-        if(map.distance(saved,point)<120){
-          saved[2]=kind;saved[3]=sectors;changed=true;
-        }
-      }
-      if(changed){
-        try{localStorage.setItem(KEY,JSON.stringify(points));}catch{}
-        redraw();
-        scheduleProgress();
-      }
-      if(lastFix){const current=terrainFor(lastFix.point);updateTerrainLabel(current.kind,current.sectors);}
-    }catch{
-      // A failed lookup keeps the conservative forest radius.
-      nextTerrainCheck=Date.now()+30000;
-      if(lastFix){const current=terrainFor(lastFix.point);updateTerrainLabel(current.kind,current.sectors);}
-    }finally{terrainPending=false;}
-  }
-  function onPosition(position,fromNative=false,terrainHint=null){
+  $('radius').textContent='7 km';
+  $('terrain').textContent=t('allDirections');
+  function onPosition(position,fromNative=false,render=true){
     const {latitude:lat,longitude:lon,accuracy}=position.coords;
     if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return;
     $('accuracy').textContent=Number.isFinite(accuracy)?Math.round(accuracy)+' m':'–';
@@ -615,28 +455,24 @@
     if(lastFix&&seconds>0&&distance/seconds>70){
       $('status').textContent=t('gpsJump');return;
     }
-    if(!marker){marker=L.circleMarker(point,{radius:8,color:'#fff',weight:3,fillColor:'#dd785f',fillOpacity:1}).addTo(map);map.setView(point,15);}
-    else marker.setLatLng(point);
-    if(followPosition&&!worldActive&&!fromNative&&(!lastFix||distance>=5))
+    if(render&&!marker){marker=L.circleMarker(point,{radius:8,color:'#fff',weight:3,fillColor:'#dd785f',fillOpacity:1}).addTo(map);map.setView(point,15);}
+    else if(render)marker.setLatLng(point);
+    if(render&&followPosition&&!worldActive&&!fromNative&&(!lastFix||distance>=5))
       map.panTo(point,{animate:true,duration:.35});
-    if(worldActive&&!fromNative)renderWorld();
-    setCountry({lat,lng:lon});
-    const terrain=terrainHint&&['field','urban','forest'].includes(terrainHint.kind)
-      ?terrainHint:terrainFor(point);
-    updateTerrainLabel(terrain.kind,terrain.sectors);
+    if(render&&worldActive&&!fromNative)renderWorld();
+    if(render)setCountry({lat,lng:lon});
     if(distance>=10){
       // Short plausible gaps form a corridor; long gaps only reveal endpoints.
       if(lastFix&&distance<=2000&&seconds>0&&seconds<=120){
         const steps=Math.ceil(distance/75);
         for(let i=1;i<steps;i++){
-          const t=i/steps;save(lastFix.point[0]+(lat-lastFix.point[0])*t,lastFix.point[1]+(lon-lastFix.point[1])*t,terrain.kind,terrain.sectors);
+          const t=i/steps;save(lastFix.point[0]+(lat-lastFix.point[0])*t,lastFix.point[1]+(lon-lastFix.point[1])*t);
         }
       }
-      save(lat,lon,terrain.kind,terrain.sectors);lastFix={point,time:now};
+      save(lat,lon);lastFix={point,time:now};
       $('status').textContent=t('exploringSaved');
     }else $('status').textContent=t('locationWaiting');
-    if(!fromNative)checkTerrain(point);
-    if(!worldActive)$('mapLabel').textContent=t('discovering');
+    if(render&&!worldActive)$('mapLabel').textContent=t('discovering');
   }
   function stop(){
     if(watcher===-1&&native)native.stopTracking();
@@ -660,16 +496,27 @@
       const fixes=JSON.parse(native.pendingFixes());
       if(!Array.isArray(fixes)||!fixes.length)return;
       let acknowledged=0;
-      for(const fix of fixes){
-        if(!Number.isFinite(fix.lat)||!Number.isFinite(fix.lon)||!Number.isFinite(fix.time))continue;
-        onPosition({coords:{latitude:fix.lat,longitude:fix.lon,accuracy:fix.accuracy},timestamp:fix.time},
-          true,{kind:fix.kind,sectors:fix.sectors});
-        acknowledged=fix.id;
+      importing=true;
+      try{
+        for(let i=0;i<fixes.length;i++){
+          const fix=fixes[i];
+          if(!Number.isFinite(fix.lat)||!Number.isFinite(fix.lon)||!Number.isFinite(fix.time))continue;
+          onPosition({coords:{latitude:fix.lat,longitude:fix.lon,accuracy:fix.accuracy},timestamp:fix.time},
+            true,i===fixes.length-1);
+          acknowledged=fix.id;
+        }
+      }finally{importing=false;}
+      if(acknowledged){
+        try{localStorage.setItem(KEY,JSON.stringify(points));}
+        catch{$('status').textContent=t('noStorage');return;}
+        $('count').textContent=String(points.length);
+        redraw();scheduleProgress();
+        if(marker&&lastFix)marker.setLatLng(lastFix.point);
+        if(lastFix)setCountry({lat:lastFix.point[0],lng:lastFix.point[1]});
+        native.ackFixes(acknowledged);
       }
-      if(acknowledged)native.ackFixes(acknowledged);
       if(lastFix&&followPosition&&!worldActive)map.setView(lastFix.point,map.getZoom(),{animate:false});
       if(worldActive)renderWorld(true);
-      if(lastFix)checkTerrain(lastFix.point);
       if(fixes.length===1000)setTimeout(syncNative,0);
     }catch{ /* Keep the native queue untouched so it can be retried. */ }
   }
@@ -679,11 +526,9 @@
   window.ETNNotificationDenied=()=>{$('status').textContent=t('notificationDenied');};
   if(native){
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncNative();});
-    setInterval(syncNative,2000);
+    setInterval(syncNative,500);
     syncNative();
   }
-  // Recheck even when GPS reports no movement and no new point is recorded.
-  setInterval(()=>{if(lastFix&&watcher!==null)checkTerrain(lastFix.point);},60000);
   $('start').onclick=()=>{
     if(watcher!==null)return;
     if(native){

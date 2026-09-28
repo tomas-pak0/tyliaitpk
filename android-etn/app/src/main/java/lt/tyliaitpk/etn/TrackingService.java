@@ -23,147 +23,21 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class TrackingService extends Service implements LocationListener {
     public static final String ACTION_STOP = "lt.tyliaitpk.etn.STOP_TRACKING";
     private static final String CHANNEL = "etn-location";
     private static final String FILENAME = "pending-locations.jsonl";
     private static final String PREFS = "etn-native";
-    private static final int[] SEARCH_DISTANCES = {125,250,500,1000,2000,3500,5000,7000};
     private static final Object FILE_LOCK = new Object();
     private LocationManager locations;
-    private final ExecutorService terrainWorker = Executors.newSingleThreadExecutor();
-    private volatile TerrainFix terrainFix;
-    private volatile boolean terrainPending;
-    private long nextTerrainAt;
-    private static class TerrainFix {
-        final double lat, lon;
-        final String kind;
-        final JSONArray sectors;
-        final long at;
-        TerrainFix(double lat, double lon, String kind, JSONArray sectors) {
-            this.lat=lat;this.lon=lon;this.kind=kind;this.sectors=sectors;this.at=System.currentTimeMillis();
-        }
-    }
-    private static float meters(double lat1, double lon1, double lat2, double lon2) {
-        float[] result=new float[1];Location.distanceBetween(lat1,lon1,lat2,lon2,result);return result[0];
-    }
-    private void checkTerrain(Location location) {
-        TerrainFix old=terrainFix;
-        long now=SystemClock.elapsedRealtime();
-        if(terrainPending||now<nextTerrainAt||(old!=null&&System.currentTimeMillis()-old.at<
-            ("unknown".equals(old.kind)?300000:900000)&&
-            meters(old.lat,old.lon,location.getLatitude(),location.getLongitude())<120))return;
-        terrainPending=true;nextTerrainAt=now+45000;
-        final double lat=location.getLatitude(),lon=location.getLongitude();
-        terrainWorker.execute(()->{
-            try {
-                TerrainFix found=fetchTerrain(lat,lon);
-                if(found!=null) {
-                    terrainFix=found;
-                    // Give fixes captured during the request the classification too.
-                    synchronized(FILE_LOCK){
-                        List<String> lines=readLines(this);
-                        StringBuilder updated=new StringBuilder();
-                        for(String line:lines){
-                            try{
-                                JSONObject item=new JSONObject(line);
-                                if(meters(lat,lon,item.getDouble("lat"),item.getDouble("lon"))<120){
-                                    item.put("kind",found.kind);item.put("sectors",found.sectors);
-                                }
-                                updated.append(item).append('\n');
-                            }catch(Exception ignored){updated.append(line).append('\n');}
-                        }
-                        Files.write(queue(this).toPath(),updated.toString().getBytes(StandardCharsets.UTF_8));
-                    }
-                }
-            }catch(Exception ignored){}finally{terrainPending=false;}
-        });
-    }
-    private static String terrainClass(List<JSONObject> elements) {
-        boolean forest=false,urban=false,field=false;
-        int buildings=0;
-        for(JSONObject element:elements){
-            JSONObject tags=element.optJSONObject("tags");
-            if(tags==null)continue;
-            String landuse=tags.optString("landuse"),natural=tags.optString("natural");
-            if("forest".equals(landuse)||"wood".equals(natural)||"trees".equals(tags.optString("landcover")))forest=true;
-            if("residential".equals(landuse)||"commercial".equals(landuse)||"industrial".equals(landuse)||
-                "retail".equals(landuse)||"construction".equals(landuse)||"garages".equals(landuse))urban=true;
-            if("farmland".equals(landuse)||"farmyard".equals(landuse)||"meadow".equals(landuse)||
-                "orchard".equals(landuse)||"vineyard".equals(landuse)||"allotments".equals(landuse)||
-                "grass".equals(landuse)||"greenfield".equals(landuse)||"grassland".equals(natural)||
-                "heath".equals(natural)||"scrub".equals(natural)||"grass".equals(tags.optString("landcover")))field=true;
-            if("count".equals(element.optString("type")))buildings=tags.optInt("total",0);
-        }
-        return forest?"forest":urban||buildings>=8?"urban":field?"field":"unknown";
-    }
-    private static TerrainFix fetchTerrain(double lat,double lon){
-        StringBuilder q=new StringBuilder("[out:json][timeout:45];");
-        for(int i=-1;i<8;i++)for(int j=0;j<(i<0?1:SEARCH_DISTANCES.length);j++){
-            int distance=i<0?0:SEARCH_DISTANCES[j];
-            double angle=Math.max(0,i)*Math.PI/4;
-            double y=lat+distance*Math.cos(angle)/111320;
-            double x=lon+distance*Math.sin(angle)/(111320*Math.max(.01,Math.cos(Math.toRadians(lat))));
-            String position=String.format(Locale.US,"%.6f,%.6f",y,x);
-            q.append("is_in(").append(position).append(");out tags;")
-                .append("nwr[\"building\"](around:120,").append(position).append(");out count;");
-        }
-        for(String endpoint:new String[]{"https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter"}){
-            HttpURLConnection conn=null;
-            try{
-                conn=(HttpURLConnection)new URL(endpoint).openConnection();
-                conn.setConnectTimeout(9000);conn.setReadTimeout(50000);
-                conn.setRequestMethod("POST");conn.setDoOutput(true);
-                conn.setRequestProperty("Content-Type","application/x-www-form-urlencoded; charset=UTF-8");
-                conn.setRequestProperty("User-Agent","ETN/0.4 (background location exploration)");
-                byte[] body=("data="+URLEncoder.encode(q.toString(),"UTF-8")).getBytes(StandardCharsets.UTF_8);
-                try(java.io.OutputStream output=conn.getOutputStream()){output.write(body);}
-                if(conn.getResponseCode()!=200)continue;
-                byte[] bytes;
-                try(InputStream input=conn.getInputStream();ByteArrayOutputStream output=new ByteArrayOutputStream()){
-                    byte[] buffer=new byte[8192];int n;
-                    while((n=input.read(buffer))!=-1){output.write(buffer,0,n);if(output.size()>5_000_000)throw new Exception("Too large");}
-                    bytes=output.toByteArray();
-                }
-                JSONArray elements=new JSONObject(new String(bytes,StandardCharsets.UTF_8)).getJSONArray("elements");
-                List<JSONObject> group=new ArrayList<>();JSONArray kinds=new JSONArray();
-                for(int i=0;i<elements.length();i++){
-                    JSONObject element=elements.getJSONObject(i);group.add(element);
-                    if("count".equals(element.optString("type"))){kinds.put(terrainClass(group));group.clear();}
-                }
-                if(kinds.length()!=1+8*SEARCH_DISTANCES.length||!group.isEmpty())continue;
-                String kind=kinds.getString(0);JSONArray sectors=new JSONArray();
-                for(int i=0;i<8;i++){
-                    int radius=7000;
-                    if("forest".equals(kind)||"unknown".equals(kind))radius=250;
-                    else if("urban".equals(kind))radius=500;
-                    else for(int j=0;j<SEARCH_DISTANCES.length;j++){
-                        String value=kinds.getString(1+i*SEARCH_DISTANCES.length+j);
-                        if(!"field".equals(value)){
-                            radius=Math.max("urban".equals(value)?500:250,SEARCH_DISTANCES[j]);
-                            break;
-                        }
-                    }
-                    sectors.put(radius);
-                }
-                return new TerrainFix(lat,lon,kind,sectors);
-            }catch(Exception ignored){}finally{if(conn!=null)conn.disconnect();}
-        }
-        return null;
-    }
+    private long lastGpsAt;
+    private float lastGpsAccuracy = Float.MAX_VALUE;
 
     static boolean isRunning(Context context) {
         return context.getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("running", false);
@@ -231,11 +105,11 @@ public class TrackingService extends Service implements LocationListener {
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
-            stopTracking();return START_NOT_STICKY;
+            stopTracking(); return START_NOT_STICKY;
         }
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
             && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            stopTracking();return START_NOT_STICKY;
+            stopTracking(); return START_NOT_STICKY;
         }
         try {
             if (Build.VERSION.SDK_INT >= 29)
@@ -246,38 +120,36 @@ public class TrackingService extends Service implements LocationListener {
                 for (String provider : new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER}) {
                     try {
                         if (locations.isProviderEnabled(provider))
-                            locations.requestLocationUpdates(provider, 2000L, 0f, this, Looper.getMainLooper());
+                            locations.requestLocationUpdates(provider, 0L, 0f, this, Looper.getMainLooper());
                     } catch (IllegalArgumentException | SecurityException ignored) {}
                 }
-                for(String provider:new String[]{LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER}){
-                    try{
-                        Location last=locations.getLastKnownLocation(provider);
-                        if(last!=null&&System.currentTimeMillis()-last.getTime()<120000&&
-                            last.hasAccuracy()&&last.getAccuracy()<=100f)onLocationChanged(last);
-                    }catch(SecurityException ignored){}
+                for (String provider : new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER}) {
+                    try {
+                        Location last = locations.getLastKnownLocation(provider);
+                        if (last != null && System.currentTimeMillis() - last.getTime() < 120000
+                            && last.hasAccuracy() && last.getAccuracy() <= 100f) onLocationChanged(last);
+                    } catch (SecurityException ignored) {}
                 }
             }
             setRunning(true);
-        } catch (SecurityException ex) { stopTracking();return START_NOT_STICKY; }
+        } catch (SecurityException ex) { stopTracking(); return START_NOT_STICKY; }
         return START_STICKY;
     }
     @Override public void onLocationChanged(Location location) {
         if (!location.hasAccuracy() || location.getAccuracy() > 100f) return;
-        checkTerrain(location);
+        long now = SystemClock.elapsedRealtime();
+        if (LocationManager.GPS_PROVIDER.equals(location.getProvider())) {
+            lastGpsAt = now; lastGpsAccuracy = location.getAccuracy();
+        } else if (now - lastGpsAt < 5000 && location.getAccuracy() >= lastGpsAccuracy) return;
         synchronized (FILE_LOCK) {
             try {
                 long previous = getSharedPreferences(PREFS, MODE_PRIVATE).getLong("lastId", 0);
                 long id = Math.max(System.currentTimeMillis() * 1000, previous + 1);
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit().putLong("lastId", id).apply();
                 JSONObject fix = new JSONObject();
-                fix.put("id", id);fix.put("lat", location.getLatitude());
-                fix.put("lon", location.getLongitude());fix.put("accuracy", location.getAccuracy());
+                fix.put("id", id); fix.put("lat", location.getLatitude());
+                fix.put("lon", location.getLongitude()); fix.put("accuracy", location.getAccuracy());
                 fix.put("time", location.getTime());
-                TerrainFix known=terrainFix;
-                if(known!=null&&System.currentTimeMillis()-known.at<600000&&
-                    meters(known.lat,known.lon,location.getLatitude(),location.getLongitude())<120){
-                    fix.put("kind",known.kind);fix.put("sectors",known.sectors);
-                }
                 try (FileOutputStream output = new FileOutputStream(queue(this), true)) {
                     output.write((fix.toString() + "\n").getBytes(StandardCharsets.UTF_8));
                 }
@@ -294,12 +166,12 @@ public class TrackingService extends Service implements LocationListener {
     }
     private void stopTracking() {
         setRunning(false);
-        if (locations != null) { locations.removeUpdates(this);locations = null; }
-        stopForeground(STOP_FOREGROUND_REMOVE);stopSelf();
+        if (locations != null) { locations.removeUpdates(this); locations = null; }
+        stopForeground(STOP_FOREGROUND_REMOVE); stopSelf();
     }
     @Override public void onDestroy() {
         if (locations != null) locations.removeUpdates(this);
-        terrainWorker.shutdownNow();
+        setRunning(false);
         super.onDestroy();
     }
     @Override public IBinder onBind(Intent intent) { return null; }
