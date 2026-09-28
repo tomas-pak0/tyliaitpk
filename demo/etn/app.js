@@ -608,9 +608,9 @@
     }
     if(!marker){marker=L.circleMarker(point,{radius:8,color:'#fff',weight:3,fillColor:'#dd785f',fillOpacity:1}).addTo(map);map.setView(point,15);}
     else marker.setLatLng(point);
-    if(followPosition&&!worldActive&&(!lastFix||distance>=5))
+    if(followPosition&&!worldActive&&!fromNative&&(!lastFix||distance>=5))
       map.panTo(point,{animate:true,duration:.35});
-    if(worldActive)renderWorld();
+    if(worldActive&&!fromNative)renderWorld();
     setCountry({lat,lng:lon});
     const terrain=terrainHint&&['field','urban','forest'].includes(terrainHint.kind)
       ?terrainHint:terrainFor(point);
@@ -658,6 +658,8 @@
         acknowledged=fix.id;
       }
       if(acknowledged)native.ackFixes(acknowledged);
+      if(lastFix&&followPosition&&!worldActive)map.setView(lastFix.point,map.getZoom(),{animate:false});
+      if(worldActive)renderWorld(true);
       if(lastFix&&!native)checkTerrain(lastFix.point);
       if(fixes.length===1000)setTimeout(syncNative,0);
     }catch{ /* Keep the native queue untouched so it can be retried. */ }
