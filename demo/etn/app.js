@@ -3,11 +3,29 @@
   'use strict';
   const KEY='etn-explored-v1', LOOPS_KEY='etn-enclosed-v1';
   const MAX_ACCURACY=100, MAX_POINTS=5000, MAX_LOOPS=100;
-  const MAX_RADIUS=7000, CLEAR_RADIUS=250;
+  const MAX_RADIUS=5000, CLEAR_RADIUS=500;
   const $=id=>document.getElementById(id);
   const {t,locale}=window.ETNI18n;
   const native=window.ETNNative||null;
+  let screenLock=null,screenLockPending=false;
+  async function keepScreenAwake(){
+    if(document.hidden||screenLock||screenLockPending||!navigator.wakeLock?.request)return;
+    screenLockPending=true;
+    try{
+      const lock=await navigator.wakeLock.request('screen');
+      if(document.hidden){await lock.release();return;}
+      screenLock=lock;
+      lock.addEventListener('release',()=>{if(screenLock===lock)screenLock=null;});
+    }catch{ /* The system can deny a screen lock, for example in power saving mode. */ }
+    finally{screenLockPending=false;}
+  }
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)keepScreenAwake();});
+  window.addEventListener('pageshow',keepScreenAwake);
+  setInterval(keepScreenAwake,30000);
+  keepScreenAwake();
   const map=L.map('map',{zoomControl:false,zoomSnap:0,zoomDelta:.5}).setView([55.1694,23.8813],7);
+  const locationBounds=point=>L.latLng(point).toBounds(MAX_RADIUS*2);
+  const overviewOptions={padding:[40,40],animate:true};
   L.control.zoom({position:'bottomright'}).addTo(map);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
     maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -33,9 +51,21 @@
   let points=load(),loops=loadLoops(),trail=[],watcher=null,lastFix=null,latestPosition=null,marker=null,queued=false;
   let importing=false;
   try{localStorage.setItem(KEY,JSON.stringify(points))}catch{}
-  let countries=[],currentCountry=null,progressTimer=null,lastProgressAt=0,progressCountry=null;
+  let countries=[],currentCountry=null,progressTimer=null,lastProgressAt=0,progressCountry=null,bordersReady=false;
+  const discovery=window.ETNDiscoveries;
+  const waitingDiscoveries=[];
+  function discoverFix(lat,lon){
+    if(!bordersReady){waitingDiscoveries.push([lat,lon]);return;}
+    discovery.enqueue(lat,lon,findCountry([lat,lon]));
+  }
   let worldActive=false;
+  const FOLLOW_KEY='etn-follow-position-v1';
   let followPosition=true;
+  try{followPosition=localStorage.getItem(FOLLOW_KEY)!=='false';}catch{}
+  function setFollowPosition(value){
+    followPosition=value;
+    try{localStorage.setItem(FOLLOW_KEY,String(value));}catch{}
+  }
   const worldView=$('worldView'),worldCanvas=$('worldCanvas');
   const countryNames=typeof Intl.DisplayNames==='function'
     ?new Intl.DisplayNames([locale],{type:'region'}):null;
@@ -111,8 +141,12 @@
       if(data.type!=='FeatureCollection'||!Array.isArray(data.features))throw Error('Invalid borders');
       countries=data.features.map(prepareCountry);
       if(marker)setCountry(marker.getLatLng());
+      bordersReady=true;
+      for(const [lat,lon] of waitingDiscoveries)discoverFix(lat,lon);
+      waitingDiscoveries.length=0;
       updateBorders();
     }catch{
+      bordersReady=true;
       $('country').textContent=t('bordersUnavailable');
       $('countryProgress').textContent='–';
     }
@@ -122,6 +156,8 @@
     const found=findCountry([point.lat,point.lng]);
     if(found===currentCountry)return;
     currentCountry=found;
+    window.ETNCurrentCountry=found;
+    discovery.updateCount(found?.properties.code);
     $('country').textContent=found?countryName(found):t('outsideCountries');
     $('countryFlag').textContent=found?countryFlag(found.properties.code):'🌐';
     $('countryProgress').textContent=found?t('calculating'):'–';
@@ -131,7 +167,7 @@
     if(!feature)return;
     $('countryPicker').hidden=true;
     if(worldActive)$('worldButton').onclick();
-    followPosition=false;
+    setFollowPosition(false);
     const [west,south,east,north]=feature.bounds;
     map.invalidateSize();
     map.fitBounds([[south,west],[north,east]],{padding:[24,24],animate:true});
@@ -158,7 +194,17 @@
     }
     $('countryPicker').hidden=false;
   };
-  map.on('dragstart',()=>{followPosition=false;});
+  // Only a deliberate map gesture pauses following. GPS-driven pans do not.
+  let mapGesture=false;
+  map.getContainer().addEventListener('pointerdown',event=>{
+    if(event.target.closest('.leaflet-control-zoom'))setFollowPosition(false);
+    else if(!event.target.closest('.leaflet-control'))mapGesture=true;
+  });
+  window.addEventListener('pointerup',()=>{mapGesture=false;});
+  window.addEventListener('pointercancel',()=>{mapGesture=false;});
+  map.getContainer().addEventListener('wheel',()=>setFollowPosition(false),{passive:true});
+  map.on('dragstart',()=>setFollowPosition(false));
+  map.on('movestart',()=>{if(mapGesture)setFollowPosition(false);});
   function pointVisibility(distance){
     if(distance<=CLEAR_RADIUS)return 1;
     if(distance>=MAX_RADIUS)return 0;
@@ -395,7 +441,7 @@
     if(worldActive)renderWorld(true);
     else map.invalidateSize();
   };
-  window.addEventListener('resize',()=>{if(worldActive)renderWorld(true);});
+  window.addEventListener('resize',()=>{if(worldActive)renderWorld(false);});
   function redraw(){if(!queued){queued=true;requestAnimationFrame(draw);}}
   map.on('move zoom zoomanim zoomend resize viewreset',redraw);redraw();
   function save(lat,lon){
@@ -440,7 +486,7 @@
       return;
     }
   }
-  $('radius').textContent='7 km';
+  $('radius').textContent='5 km';
   $('terrain').textContent=t('allDirections');
   function onPosition(position,fromNative=false,render=true){
     const {latitude:lat,longitude:lon,accuracy}=position.coords;
@@ -456,7 +502,11 @@
       $('status').textContent=t('gpsJump');return;
     }
     latestPosition=point;
-    if(render&&!marker){marker=L.circleMarker(point,{radius:8,color:'#fff',weight:3,fillColor:'#dd785f',fillOpacity:1}).addTo(map);map.setView(point,15);}
+    discoverFix(lat,lon);
+    if(render&&!marker){
+      marker=L.circleMarker(point,{radius:8,color:'#fff',weight:3,fillColor:'#dd785f',fillOpacity:1}).addTo(map);
+      if(followPosition)map.fitBounds(locationBounds(point),{padding:[40,40],animate:false});
+    }
     else if(render)marker.setLatLng(point);
     if(render&&followPosition&&!worldActive&&!fromNative&&(!lastFix||distance>=5))
       map.panTo(point,{animate:true,duration:.35});
@@ -481,8 +531,10 @@
     watcher=null;lastFix=null;latestPosition=null;trail=[];$('start').disabled=false;$('stop').disabled=true;
   }
   let nativeStartAt=0;
-  function syncNative(){
-    if(!native)return;
+  let syncing=false;
+  async function syncNative(){
+    if(!native||syncing||!bordersReady)return;
+    syncing=true;
     try{
       const tracking=native.isTracking();
       if(tracking)nativeStartAt=0;
@@ -507,6 +559,7 @@
           acknowledged=fix.id;
         }
       }finally{importing=false;}
+      await discovery.flush();
       if(acknowledged){
         try{localStorage.setItem(KEY,JSON.stringify(points));}
         catch{$('status').textContent=t('noStorage');return;}
@@ -520,10 +573,11 @@
         native.ackFixes(acknowledged);
       }
       if(latestPosition&&followPosition&&!worldActive)
-        map.setView(latestPosition,map.getZoom()<12?15:map.getZoom(),{animate:false});
-      if(worldActive)renderWorld(true);
+        map.panTo(latestPosition,{animate:false});
+      if(worldActive)renderWorld(false);
       if(fixes.length===1000)setTimeout(syncNative,0);
     }catch{ /* Keep the native queue untouched so it can be retried. */ }
+    finally{syncing=false;}
   }
   window.ETNSyncNative=syncNative;
   window.ETNTrackingStarted=()=>{$('status').textContent=t('backgroundTracking');syncNative();};
@@ -552,5 +606,5 @@
     $('status').textContent=t('waitingGps');
   };
   $('stop').onclick=()=>{stop();$('status').textContent=t('stopped');};
-  $('recenter').onclick=()=>{if(marker){followPosition=true;$('countryPicker').hidden=true;if(worldActive)renderWorld(true);else map.flyTo(marker.getLatLng(),Math.max(map.getZoom(),15),{duration:.6});}else $('status').textContent=t('noLocation');};
+  $('recenter').onclick=()=>{if(marker){setFollowPosition(true);$('countryPicker').hidden=true;if(worldActive)renderWorld(true);else map.fitBounds(locationBounds(marker.getLatLng()),overviewOptions);}else $('status').textContent=t('noLocation');};
 })();

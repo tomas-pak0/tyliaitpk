@@ -1,7 +1,5 @@
-# ETN – Explore the Neighborhood
+# ETN naršyklės demonstracija (0.6.7)
 
-ETN 0.6.0 atidengia žemėlapį einant ar važiuojant. Aplink kiekvieną išsaugotą GPS tašką visomis kryptimis taikoma vienoda 7 km riba: iki 250 m žemėlapis visiškai atidengtas, nuo 250 m iki 7 km skaidrumas tolygiai mažėja, už 7 km lieka rūkas. Jei apeinamas pakankamai didelis uždaras kontūras, visas jo vidus atidengiamas. Seniau sukaupti tyrinėjimo taškai išlieka, jiems taip pat taikomas vienodas spindulys. Miško, laukų ir miesto klasifikavimas bei jo tinklo užklausos pašalintos.
+Žemėlapio atidengimas, šalių atpažinimas, gyvenviečių atradimas ir atskiras savivaldybių centrų skaitiklis. Vieta ir atradimai saugomi naršyklėje. Reikia HTTPS, vietos leidimo ir interneto žemėlapio plytelėms. Naršyklės langas negali rinkti GPS taškų kaip Android fono paslauga.
 
-Android programėlė, kai tyrinėjimas įjungtas, fone prašo GPS ir tinklo vietos atnaujinimų be minimalaus laiko ar atstumo slenksčio; faktinį dažnį lemia telefonas ir GPS signalas. Vietos tikslumas iki 100 m priimamas; naujas taškas išsaugomas pajudėjus bent 10 m. Fono paslauga rodo ETN pranešimo ikoną. Atidarius programėlę, sukaupti GPS taškai įkeliami viena partija, todėl ilgesni maršrutai neturi blokuoti sąsajos po kiekvieno taško. Tyrinėjimą galima sustabdyti programėlėje arba pranešime.
-
-Šalių ribos ir apytiksliai ištirtas procentas apskaičiuojami pagal vietinius „Natural Earth“ duomenis. Žemėlapio plytelėms reikia interneto, GPS ir jau atsisiųsti ribų duomenys veikia atskirai. Vietų istorija saugoma tik įrenginyje.
+Demonstracijai pridedamos visų šalių ribos ir šalių duomenys, tačiau gyvenviečių, administracinių vienetų ir centrų failai apima tik Lietuvą: 20 555 GeoNames gyvenvietes ir 60 savivaldybių centrų (55 skirtingus taškus). Už Lietuvos ribų veikia šalių atradimai, bet gyvenviečių ir centrų skaitikliai nenurodomi. Lietuvos skaitiklių vardiklis atitinka tą patį 2026-09-29 duomenų rinkinį. Duomenys: GeoNames, CC BY 4.0; ribos: Natural Earth.
