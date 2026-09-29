@@ -26,7 +26,8 @@ jobs:
       - name: Copy bundled ETN interface
         run: |
           mkdir -p android-etn/app/src/main/assets
-          cp demo/etn/index.html demo/etn/style.css demo/etn/i18n.js demo/etn/discoveries.js demo/etn/app.js android-etn/app/src/main/assets/
+          git clone --depth 1 https://github.com/tomas-pak0/etn.git /tmp/etn-code
+          cp /tmp/etn-code/ETN/{index.html,style.css,i18n.js,discoveries.js,app.js} android-etn/app/src/main/assets/
           cp -R demo/etn/vendor android-etn/app/src/main/assets/
           curl -fL --retry 3 -o /tmp/etn-full.zip https://github.com/tomas-pak0/etn/releases/download/v0.6.7/ETN-0.6.7-source.zip
           unzip -q /tmp/etn-full.zip 'ETN/data/*' -d /tmp/etn-full
