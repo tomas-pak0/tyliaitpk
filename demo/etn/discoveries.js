@@ -9,7 +9,7 @@
   const tileCache=new Map();
   let index=null,indexPromise=null,adminPromise=null,dbPromise=null,chain=Promise.resolve(),activeEvent=null,discoveryError=false,dismissTimer=null;
   let centerIndex=null,centerPromise=null,lastCountCode=null;
-  const centerByPlace=new Map(),migratedCountries=new Set(),seenCenterUnits=new Set();
+  const centerByPlace=new Map(),centerRows=new Map(),migratedCountries=new Set(),seenCenterUnits=new Set();
   const fallback={countries:new Set(),places:new Set(),centers:new Set(),events:[],records:[]};
   function openDB(){
     if(dbPromise)return dbPromise;
@@ -106,6 +106,7 @@
     if(!centerPromise)centerPromise=unpack('data/centers-index.bin').then(value=>{
       centerIndex=value;
       for(const rows of Object.values(value.tiles))for(const row of rows){
+        centerRows.set(row[0],row);
         const placeKey=`${row[5]}:${row[1]}`;
         if(!centerByPlace.has(placeKey))centerByPlace.set(placeKey,[]);
         centerByPlace.get(placeKey).push(row[0]);
@@ -122,18 +123,37 @@
     if(!db){
       for(const key of fallback.places){
         if(!key.startsWith(`p:${code}:`))continue;
-        for(const unit of centerByPlace.get(key.slice(2))||[])fallback.centers.add(`m:${unit}`);
+        const place=fallback.records.find(item=>item.key===key);
+        for(const unit of centerByPlace.get(key.slice(2))||[]){
+          const centerKey=`m:${unit}`,row=centerRows.get(unit);
+          fallback.centers.add(centerKey);
+          if(row&&place&&!fallback.records.some(item=>item.key===centerKey))
+            fallback.records.push({key:centerKey,type:'center',code,name:row[2],
+              admin2:row[6],discoveredAt:place.discoveredAt});
+        }
       }
       return;
     }
     await new Promise((resolve,reject)=>{
-      const tx=db.transaction('visited','readwrite'),store=tx.objectStore('visited');
+      const tx=db.transaction(['visited','records'],'readwrite'),
+        store=tx.objectStore('visited'),records=tx.objectStore('records');
       const range=IDBKeyRange.bound(`p:${code}:`,`p:${code}:\uffff`);
       store.openKeyCursor(range).onsuccess=e=>{
         const cursor=e.target.result;
         if(!cursor)return;
-        for(const unit of centerByPlace.get(String(cursor.key).slice(2))||[])
-          store.put(true,`m:${unit}`);
+        const placeKey=String(cursor.key);
+        const units=centerByPlace.get(placeKey.slice(2))||[];
+        if(units.length)records.get(placeKey).onsuccess=event=>{
+          const place=event.target.result;
+          for(const unit of units){
+            const centerKey=`m:${unit}`,row=centerRows.get(unit);
+            store.put(true,centerKey);
+            if(row&&place)records.get(centerKey).onsuccess=existing=>{
+              if(!existing.target.result)records.put({key:centerKey,type:'center',code,
+                name:row[2],admin2:row[6],discoveredAt:place.discoveredAt});
+            };
+          }
+        };
         cursor.continue();
       };
       tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
@@ -287,34 +307,124 @@
   function flush(){return chain.then(()=>{
     if(discoveryError){discoveryError=false;throw Error('Discovery data could not be stored');}
   });}
-  async function exportList(type){
+  async function exportList(type,format){
     await flush();
+    await loadCenters();
     const db=await openDB();
-    const records=db?await new Promise(resolve=>{
+    const allRecords=()=>db?new Promise(resolve=>{
       const request=db.transaction('records','readonly').objectStore('records').getAll();
       request.onsuccess=()=>resolve(request.result||[]);
       request.onerror=()=>resolve([]);
-    }):fallback.records;
+    }):Promise.resolve(fallback.records);
+    let records=await allRecords();
+    if(type==='center'&&centerIndex){
+      for(const code of new Set(records.filter(item=>item.type==='settlement').map(item=>item.code)))
+        await migrateCountry(code);
+      records=await allRecords();
+    }
     const selected=records.filter(item=>item.type===type)
       .sort((a,b)=>(a.discoveredAt||0)-(b.discoveredAt||0));
-    const quote=value=>`"${String(value??'').replaceAll('"','""')}"`;
-    const rows=[['GeoNames ID / centras','Šalis','Pavadinimas','Apskritis / regionas','Savivaldybė / rajonas','Atrasta (vietos laiku)','Atrasta (ISO UTC)','Apytiksliai gyventojų','Rinkinio data'].map(quote).join(',')];
-    for(const item of selected){
-      const date=item.discoveredAt?new Date(item.discoveredAt):null;
-      rows.push([item.key,item.code,item.name,item.admin1,item.admin2,
-        date?.toLocaleString(locale)||'',date?.toISOString()||'',item.population||'',index?.snapshot||'2026-09-29'].map(quote).join(','));
+    if(format==='pdf'){
+      const report={
+        title:t(type==='center'?'exportCentersTitle':'exportSettlementsTitle'),
+        generated:t('pdfGenerated')+': '+new Date().toLocaleString(locale),
+        countLabel:t('pdfCount'),
+        districtLabel:t('exportDistrict'),
+        empty:t('pdfEmpty'),
+        year:String(new Date().getFullYear()),
+        entries:selected.map(item=>({
+          name:item.name||'–',
+          district:item.admin2||item.admin1||'–',
+          date:item.discoveredAt?new Date(item.discoveredAt).toLocaleString(locale):'–'
+        }))
+      };
+      const filename=`ETN-${type==='center'?'centrai':'gyvenvietes'}-${new Date().toISOString().slice(0,10)}.pdf`;
+      if(window.ETNNative?.exportPdf)window.ETNNative.exportPdf(filename,JSON.stringify(report));
+      else printReport(report);
+      return;
     }
-    const content='\uFEFF'+rows.join('\r\n')+'\r\n';
-    const filename=`ETN-${type==='center'?'centrai':'gyvenvietes'}-${new Date().toISOString().slice(0,10)}.csv`;
-    if(window.ETNNative?.exportCsv)window.ETNNative.exportCsv(filename,content);
+    let content;
+    if(format==='txt'){
+      const rows=[t(type==='center'?'exportCentersTitle':'exportSettlementsTitle'),''];
+      for(const [position,item] of selected.entries()){
+        const date=item.discoveredAt?new Date(item.discoveredAt):null;
+        rows.push(`${position+1}. ${t('exportName')}: ${item.name||'–'}`,
+          `   ${t('exportDistrict')}: ${item.admin2||item.admin1||'–'}`,
+          `   ${t('exportDate')}: ${date?.toLocaleString(locale,{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})||'–'}`,
+          '');
+      }
+      content='\uFEFF'+rows.join('\r\n');
+    }else{
+      const quote=value=>`"${String(value??'').replaceAll('"','""')}"`;
+      const rows=[['GeoNames ID / centras','Šalis','Pavadinimas','Apskritis / regionas','Savivaldybė / rajonas','Atrasta (vietos laiku)','Atrasta (ISO UTC)','Apytiksliai gyventojų','Rinkinio data'].map(quote).join(',')];
+      for(const item of selected){
+        const date=item.discoveredAt?new Date(item.discoveredAt):null;
+        rows.push([item.key,item.code,item.name,item.admin1,item.admin2,
+          date?.toLocaleString(locale)||'',date?.toISOString()||'',item.population||'',index?.snapshot||'2026-09-29'].map(quote).join(','));
+      }
+      content='\uFEFF'+rows.join('\r\n')+'\r\n';
+    }
+    const filename=`ETN-${type==='center'?'centrai':'gyvenvietes'}-${new Date().toISOString().slice(0,10)}.${format}`;
+    const mime=format==='txt'?'text/plain':'text/csv';
+    if(window.ETNNative?.exportFile)window.ETNNative.exportFile(filename,content,mime);
+    else if(format==='csv'&&window.ETNNative?.exportCsv)window.ETNNative.exportCsv(filename,content);
     else{
-      const url=URL.createObjectURL(new Blob([content],{type:'text/csv;charset=utf-8'}));
+      const url=URL.createObjectURL(new Blob([content],{type:mime+';charset=utf-8'}));
       const link=document.createElement('a');link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();
       setTimeout(()=>URL.revokeObjectURL(url),60000);
     }
   }
-  $('settlementCard').onclick=()=>exportList('settlement');
-  $('centerCard').onclick=()=>exportList('center');
+  function printReport(report){
+    const escape=value=>String(value).replace(/[&<>"']/g,char=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    })[char]);
+    const rows=report.entries.length?report.entries.map((item,index)=>
+      `<div class="row"><strong>${index+1}. ${escape(item.name)}</strong><small>${escape(report.districtLabel)}: ${escape(item.district)}<span>${escape(item.date)}</span></small></div>`
+    ).join(''):`<p>${escape(report.empty)}</p>`;
+    const frame=document.createElement('iframe');
+    frame.style.cssText='position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none';
+    document.body.append(frame);
+    frame.contentDocument.open();
+    frame.contentDocument.write(`<!doctype html><html><head><base href="${escape(location.href)}"><meta charset="utf-8"><title>${escape(report.title)}</title><style>
+      @page{size:A4;margin:15mm}*{box-sizing:border-box}body{margin:0;color:#111318;background:#fff;font:12px system-ui,sans-serif}
+      header{display:flex;align-items:center;gap:14px;background:#111318;color:#fff;padding:20px;border-bottom:5px solid #ed3948}
+      header img{width:52px;height:52px}header h1{margin:0;font-size:24px}header .brand{margin-left:auto;text-align:right}
+      h2{font-size:21px;margin:23px 0 7px}.meta{color:#647075;margin:0 0 16px}.count{color:#ed3948;font-weight:700;margin:0 0 15px}
+      .row{break-inside:avoid;padding:10px 13px;border-left:4px solid #ed3948;margin:0 0 7px;background:#f4f6f5;border-radius:5px}
+      .row strong{display:block;font-size:13px}.row small{display:flex;justify-content:space-between;gap:10px;color:#657076;margin-top:5px}
+      footer{margin-top:24px;border-top:1px solid #dce0de;padding-top:10px;color:#657076}
+    </style></head><body><header><img src="branding/etn.svg" alt="ETN"><h1>ETN</h1><div class="brand">TyliaiTPk<br><img src="branding/tyliaitpk.svg" alt="TyliaiTPk"></div></header>
+      <h2>${escape(report.title)}</h2><p class="meta">${escape(report.generated)}</p>
+      <p class="count">${escape(report.countLabel)}: ${report.entries.length}</p>${rows}
+      <footer>ETN • © TyliaiTPk ${escape(report.year)}</footer></body></html>`);
+    frame.contentDocument.close();
+    Promise.all([...frame.contentDocument.images].map(img=>img.decode().catch(()=>{})))
+      .then(()=>{
+        frame.contentWindow.focus();frame.contentWindow.print();
+        setTimeout(()=>frame.remove(),60000);
+      });
+  }
+  let exportType=null;
+  function closeExport(){$('exportDialog').hidden=true;exportType=null;}
+  function chooseExport(type){
+    exportType=type;
+    $('exportTitle').textContent=t(type==='center'?'exportCentersTitle':'exportSettlementsTitle');
+    $('exportDialog').hidden=false;
+    requestAnimationFrame(updateFormats);
+  }
+  function updateFormats(){
+    const narrow=$('exportOptions').clientWidth<270;
+    $('exportCsv').hidden=narrow;
+    $('exportOptions').classList.toggle('two-formats',narrow);
+  }
+  window.addEventListener('resize',updateFormats);
+  $('settlementCard').onclick=()=>chooseExport('settlement');
+  $('centerCard').onclick=()=>chooseExport('center');
+  $('exportCsv').onclick=()=>{const type=exportType;closeExport();if(type)exportList(type,'csv');};
+  $('exportTxt').onclick=()=>{const type=exportType;closeExport();if(type)exportList(type,'txt');};
+  $('exportPdf').onclick=()=>{const type=exportType;closeExport();if(type)exportList(type,'pdf');};
+  $('exportCancel').onclick=closeExport;
+  $('exportDialog').onclick=event=>{if(event.target===$('exportDialog'))closeExport();};
   loadIndex().then(value=>{if(value)value.tilesSet=new Set(value.tiles);showNext()});
   loadCenters();
   window.ETNDiscoveries={enqueue,flush,updateCount};
