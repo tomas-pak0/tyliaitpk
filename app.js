@@ -1,4 +1,8 @@
 const translations = {
+  "privacyLink": ["Privatumo politika", "Privacy policy"],
+  "termsLink": ["Paslaugų teikimo sąlygos", "Terms of service"],
+  "backHome": ["Į pagrindinį puslapį", "Back to home"],
+  "legalNavigation": ["Teisinė informacija", "Legal information"],
   "navAbout": [
     "Apie",
     "About"
@@ -184,7 +188,15 @@ function setLanguage(language) {
     const value = translations[element.dataset.i18nAria];
     if (value) element.setAttribute("aria-label", value[index]);
   });
-  document.querySelector('meta[name="description"]').content = translations.description[index];
+  const description = document.querySelector('meta[name="description"]');
+  if (description) {
+    description.content = description.dataset[selected === "en" ? "descriptionEn" : "descriptionLt"] || translations.description[index];
+  }
+  document.querySelectorAll("[data-language-content]").forEach(element => {
+    element.hidden = element.dataset.languageContent !== selected;
+  });
+  const pageTitle = document.body.dataset[selected === "en" ? "titleEn" : "titleLt"];
+  if (pageTitle) document.title = pageTitle;
   document.querySelectorAll("[data-language]").forEach(button => {
     button.setAttribute("aria-pressed", String(button.dataset.language === selected));
   });
@@ -197,4 +209,5 @@ document.querySelectorAll("[data-language]").forEach(button => {
 
 let savedLanguage = "lt";
 try { savedLanguage = localStorage.getItem("tyliaitpk-language") || "lt"; } catch {}
-setLanguage(savedLanguage);
+const requestedLanguage = new URLSearchParams(location.search).get("lang");
+setLanguage(requestedLanguage === "en" || requestedLanguage === "lt" ? requestedLanguage : savedLanguage);
