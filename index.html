@@ -12,7 +12,7 @@
   >
 
   <link rel="icon" type="image/svg+xml" href="icons/tyliaitpk-favicon.svg?v=2">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261005-2">
 </head>
 
 <body>
@@ -24,12 +24,16 @@
         Tyliai<span>TPk</span>
       </a>
 
-      <nav>
-        <a href="#about">Apie</a>
-        <a href="#services">Paslaugos</a>
-        <a href="#projects">Projektai</a>
-        <a href="#contact">Kontaktai</a>
+      <nav aria-label="Pagrindinis meniu" data-i18n-aria="navigation">
+        <a href="#about" data-i18n="navAbout">Apie</a>
+        <a href="#services" data-i18n="navServices">Paslaugos</a>
+        <a href="#projects" data-i18n="navProjects">Projektai</a>
+        <a href="#contact" data-i18n="navContact">Kontaktai</a>
       </nav>
+      <div class="language-switch" role="group" aria-label="Kalba / Language">
+        <button type="button" data-language="lt" lang="lt" aria-label="Lietuvių" aria-pressed="true">LT</button>
+        <button type="button" data-language="en" lang="en" aria-label="English" aria-pressed="false">EN</button>
+      </div>
 
     </div>
   </header>
@@ -42,26 +46,26 @@
     <section id="home" class="hero">
       <div class="container hero-content">
 
-        <p class="eyebrow">
+        <p class="eyebrow" data-i18n="eyebrow">
           WEB DEVELOPMENT · DIGITAL SOLUTIONS
         </p>
 
         <h1>
-          Paprasti sprendimai.<br>
-          <span>Aiškus rezultatas.</span>
+          <span class="hero-lead" data-i18n="heroLead">Paprasti sprendimai.</span><br>
+          <span data-i18n="heroResult">Aiškus rezultatas.</span>
         </h1>
 
-        <p class="hero-text">
+        <p class="hero-text" data-i18n="heroText">
           Kuriu modernias interneto svetaines ir funkcionalius
           skaitmeninius sprendimus žmonėms bei verslui.
         </p>
 
         <div class="hero-buttons">
-          <a href="#projects" class="button primary">
+          <a href="#projects" class="button primary" data-i18n="myWork">
             Mano darbai
           </a>
 
-          <a href="#contact" class="button secondary">
+          <a href="#contact" class="button secondary" data-i18n="contactButton">
             Susisiekti
           </a>
         </div>
@@ -75,11 +79,11 @@
     <section id="about" class="section">
       <div class="container">
 
-        <p class="section-label">01 / APIE</p>
+        <p class="section-label" data-i18n="aboutLabel">01 / APIE</p>
 
-        <h2>Apie TyliaiTPk</h2>
+        <h2 data-i18n="aboutTitle">Apie TyliaiTPk</h2>
 
-        <p class="section-text">
+        <p class="section-text" data-i18n="aboutText">
           TyliaiTPk – mano kuriamų interneto projektų ir skaitmeninių
           sprendimų erdvė. Vertinu paprastumą, aiškų dizainą ir
           funkcionalumą.
@@ -94,16 +98,16 @@
     <section id="services" class="section">
       <div class="container">
 
-        <p class="section-label">02 / PASLAUGOS</p>
+        <p class="section-label" data-i18n="servicesLabel">02 / PASLAUGOS</p>
 
-        <h2>Ką kuriu</h2>
+        <h2 data-i18n="servicesTitle">Ką kuriu</h2>
 
         <div class="cards">
 
           <article class="card">
             <span>01</span>
-            <h3>Interneto svetainės</h3>
-            <p>
+            <h3 data-i18n="websitesTitle">Interneto svetainės</h3>
+            <p data-i18n="websitesText">
               Reprezentacinės ir asmeninės interneto svetainės,
               pritaikytos kompiuteriams ir telefonams.
             </p>
@@ -111,8 +115,8 @@
 
           <article class="card">
             <span>02</span>
-            <h3>Web sprendimai</h3>
-            <p>
+            <h3 data-i18n="toolsTitle">Web sprendimai</h3>
+            <p data-i18n="toolsText">
               Nedideli internetiniai įrankiai ir individualūs
               sprendimai konkrečioms užduotims.
             </p>
@@ -120,8 +124,8 @@
 
           <article class="card">
             <span>03</span>
-            <h3>Atnaujinimas</h3>
-            <p>
+            <h3 data-i18n="updatesTitle">Atnaujinimas</h3>
+            <p data-i18n="updatesText">
               Esamų svetainių turinio, struktūros ir išvaizdos
               atnaujinimas.
             </p>
@@ -138,28 +142,28 @@
     <section id="projects" class="section">
       <div class="container">
 
-        <p class="section-label">03 / PROJEKTAI</p>
+        <p class="section-label" data-i18n="projectsLabel">03 / PROJEKTAI</p>
 
-        <h2>Mano darbai</h2>
-        <p>Atidarykite projektų demonstracines versijas tiesiai naršyklėje.</p>
+        <h2 data-i18n="myWork">Mano darbai</h2>
+        <p data-i18n="projectsIntro">Atidarykite projektų demonstracines versijas tiesiai naršyklėje.</p>
 
-        <div class="project">
+        <div class="project" hidden>
 
           <div>
             <div class="project-heading">
               <img class="project-icon" src="icons/darbo-valandos.svg" alt="" width="72" height="72" loading="lazy">
               <div>
-                <p class="project-type">WEB PROGRAMĖLĖ · DEMO</p>
+                <p class="project-type" data-i18n="webApp">WEB PROGRAMĖLĖ · DEMO</p>
                 <h3>Darbo valandos</h3>
               </div>
             </div>
 
-            <p>
+            <p data-i18n="workText">
               Mobiliesiems įrenginiams pritaikytas darbo laiko
               registravimo įrankis.
             </p>
             <div class="project-links">
-              <a href="demo/darbo-valandos/index.html" target="_blank" rel="noopener noreferrer">Atidaryti demonstraciją ↗</a>
+              <a href="demo/darbo-valandos/index.html" target="_blank" rel="noopener noreferrer" data-i18n="openDemo">Atidaryti demonstraciją ↗</a>
             </div>
           </div>
 
@@ -174,30 +178,30 @@
             <div class="project-heading">
               <img class="project-icon" src="icons/sypsena.svg" alt="" width="72" height="72" loading="lazy">
               <div>
-                <p class="project-type">MOBILI PROGRAMĖLĖ · DEMO</p>
+                <p class="project-type" data-i18n="mobileApp">MOBILI PROGRAMĖLĖ · DEMO</p>
                 <h3>Šypsena</h3>
               </div>
             </div>
-            <p>Dantų valymo laikmatis ir kasdienio įpročio sekimas telefone.</p>
+            <p data-i18n="smileText">Dantų valymo laikmatis ir kasdienio įpročio sekimas telefone.</p>
             <div class="project-links">
-              <a href="demo/sypsena/index.html" target="_blank" rel="noopener noreferrer">Atidaryti demonstraciją ↗</a>
+              <a href="demo/sypsena/index.html" target="_blank" rel="noopener noreferrer" data-i18n="openDemo">Atidaryti demonstraciją ↗</a>
             </div>
           </div>
-          <span class="project-number">002</span>
+          <span class="project-number">001</span>
         </div>
 
-        <div class="project">
+        <div class="project" hidden>
           <div>
             <div class="project-heading">
               <img class="project-icon" src="icons/fin-gidas.svg" alt="" width="72" height="72" loading="lazy">
               <div>
-                <p class="project-type">FINANSŲ ĮRANKIS · DEMO</p>
+                <p class="project-type" data-i18n="financeApp">FINANSŲ ĮRANKIS · DEMO</p>
                 <h3>Fin’gidas</h3>
               </div>
             </div>
-            <p>Interaktyvi pajamų ir išlaidų peržiūra su pavyzdiniais duomenimis.</p>
+            <p data-i18n="financeText">Interaktyvi pajamų ir išlaidų peržiūra su pavyzdiniais duomenimis.</p>
             <div class="project-links">
-              <a href="demo/fin-gidas/index.html" target="_blank" rel="noopener noreferrer">Atidaryti demonstraciją ↗</a>
+              <a href="demo/fin-gidas/index.html" target="_blank" rel="noopener noreferrer" data-i18n="openDemo">Atidaryti demonstraciją ↗</a>
             </div>
           </div>
           <span class="project-number">003</span>
@@ -208,16 +212,16 @@
             <div class="project-heading">
               <img class="project-icon" src="icons/kur-as.svg" alt="" width="72" height="72" loading="lazy">
               <div>
-                <p class="project-type">VIETOS PROGRAMĖLĖ · DEMO</p>
+                <p class="project-type" data-i18n="locationApp">VIETOS PROGRAMĖLĖ · DEMO</p>
                 <h3>Kur aš?</h3>
               </div>
             </div>
-            <p>Vieta žemėlapyje, apytikslis adresas ir telefono duomenys. Pasirinkus galima gyvai bendrinti vietą su kitu žmogumi iki išjungimo.</p>
+            <p data-i18n="locationText">Vieta žemėlapyje, apytikslis adresas ir telefono duomenys. Pasirinkus galima gyvai bendrinti vietą su kitu žmogumi iki išjungimo.</p>
             <div class="project-links">
-              <a href="https://kur-as.t0m45-p4k0.chatgpt.site" target="_blank" rel="noopener noreferrer">Atidaryti demonstraciją ↗</a>
+              <a href="https://kur-as.t0m45-p4k0.chatgpt.site" target="_blank" rel="noopener noreferrer" data-i18n="openDemo">Atidaryti demonstraciją ↗</a>
             </div>
           </div>
-          <span class="project-number">004</span>
+          <span class="project-number">002</span>
         </div>
 
         <div class="project">
@@ -225,16 +229,16 @@
             <div class="project-heading">
               <img class="project-icon" src="icons/asis.svg?v=2" alt="" width="72" height="72" loading="lazy">
               <div>
-                <p class="project-type">GEODEZINĖ PROGRAMĖLĖ · DEMO</p>
+                <p class="project-type" data-i18n="surveyApp">GEODEZINĖ PROGRAMĖLĖ · DEMO</p>
                 <h3>Ašis</h3>
               </div>
             </div>
-            <p>Vieta žemėlapyje, Civil 3D ašies importas, piketažas ir atstumas iki ašies.</p>
+            <p data-i18n="axisText">Vieta žemėlapyje, Civil 3D ašies importas, piketažas ir atstumas iki ašies.</p>
             <div class="project-links">
-              <a href="demo/asis/index.html" target="_blank" rel="noopener noreferrer">Atidaryti demonstraciją ↗</a>
+              <a href="demo/asis/index.html" target="_blank" rel="noopener noreferrer" data-i18n="openDemo">Atidaryti demonstraciją ↗</a>
             </div>
           </div>
-          <span class="project-number">005</span>
+          <span class="project-number">003</span>
         </div>
 
         <div class="project">
@@ -242,16 +246,16 @@
             <div class="project-heading">
               <img class="project-icon" src="icons/etn.svg" alt="" width="72" height="72" loading="lazy">
               <div>
-                <p class="project-type">ŽEMĖLAPIO PROGRAMĖLĖ · DEMO</p>
+                <p class="project-type" data-i18n="mapApp">ŽEMĖLAPIO PROGRAMĖLĖ · DEMO</p>
                 <h3>ETN · Explore the Neighborhood</h3>
               </div>
             </div>
-            <p>Tyrinėk aplinką: judant atsiveria rūku uždengtas žemėlapis, o atradimus galima eksportuoti PDF ar TXT. Demonstracijoje gyvenviečių duomenys apima Lietuvą.</p>
+            <p data-i18n="etnText">Tyrinėk aplinką: judant atsiveria rūku uždengtas žemėlapis, o atradimus galima eksportuoti PDF ar TXT. Demonstracijoje gyvenviečių duomenys apima Lietuvą.</p>
             <div class="project-links">
-              <a href="demo/etn/index.html" target="_blank" rel="noopener noreferrer">Atidaryti demonstraciją ↗</a>
+              <a href="demo/etn/index.html" target="_blank" rel="noopener noreferrer" data-i18n="openDemo">Atidaryti demonstraciją ↗</a>
             </div>
           </div>
-          <span class="project-number">006</span>
+          <span class="project-number">004</span>
         </div>
 
       </div>
@@ -263,11 +267,11 @@
     <section id="contact" class="section contact">
       <div class="container">
 
-        <p class="section-label">04 / KONTAKTAI</p>
+        <p class="section-label" data-i18n="contactLabel">04 / KONTAKTAI</p>
 
-        <h2>Turite idėją?</h2>
+        <h2 data-i18n="contactTitle">Turite idėją?</h2>
 
-        <p class="section-text">
+        <p class="section-text" data-i18n="contactText">
           Galime aptarti interneto svetainę ar kitą skaitmeninį
           sprendimą.
         </p>
@@ -287,13 +291,13 @@
 
       <p>© <span id="year"></span> TyliaiTPk</p>
 
-      <p>Web Development</p>
+      <p data-i18n="footer">Web Development</p>
 
     </div>
   </footer>
 
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20261005-2"></script>
 
 </body>
 </html>
