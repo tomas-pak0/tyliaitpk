@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="lt">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101216"><meta name="description" content="Vieta, kelio ašis ir piketažas tavo telefone.">
+<title>Ašis · geodezinė vieta</title><link rel="icon" href="icon.svg" type="image/svg+xml">
+<script>window.AsisLanguage=localStorage.getItem('asis-language')==='en'?'en':'lt';document.documentElement.lang=window.AsisLanguage;</script>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css"><link rel="stylesheet" href="style.css?v=19">
+</head>
+<body>
+<header><img src="icon.svg" alt=""><div class="header-title"><h1>Ašis</h1><p>Vieta · piketažas · atstumas iki ašies</p></div><nav class="language-switch" aria-label="Kalba"><button type="button" data-language="lt" aria-label="Lietuvių kalba"><img src="flag-lt.svg" alt=""> LT</button><button type="button" data-language="en" aria-label="English language"><img src="flag-en.svg" alt=""> EN</button></nav></header>
+<main>
+ <div class="status-line"><span id="live" role="status">Laukiama vietos leidimo</span><span id="updated">Matavimas: –</span></div>
+ <div class="map-shell"><div id="map" role="region" aria-label="Vieta ir kelio ašis žemėlapyje"></div><button id="centerMap" type="button">Mano vieta</button></div>
+ <p id="status" role="status">Paspausk „Rodyti vietą“ ir suteik vietos leidimą.</p>
+ <section class="grid" aria-label="Geodeziniai duomenys">
+  <div class="card station-card"><span class="label">Piketažas</span><strong id="stationValue">Įkelk ašį</strong></div>
+  <div class="card offset-card"><span class="label">Atstumas iki ašies</span><strong id="offsetValue">–</strong></div>
+  <div class="card wide"><span class="label">Koordinatės (WGS84)</span><strong id="coords">–</strong></div>
+  <div class="card wide"><span class="label">Apytikslės koordinatės (LKS94, EPSG:3346)</span><strong id="lksCoords">–</strong></div>
+  <div class="card"><span class="label">Vietos tikslumas</span><strong id="accuracy">–</strong></div>
+  <div class="card"><span class="label">GPS / palydovai</span><strong id="gps">Naršyklėje neprieinama</strong></div>
+ </section>
+ <div class="actions"><button id="share" type="button" disabled>Bendrinti koordinates</button></div>
+ <p id="shareStatus" class="hint" role="status"></p>
+ <textarea id="sharePreview" class="share-preview" aria-label="Vietos tekstas kopijavimui" readonly hidden></textarea>
+ <details class="card target-section">
+  <summary>Taškas pagal koordinates</summary>
+  <form id="targetForm">
+   <div class="options">
+    <label>Koordinačių sistema<select id="targetSystem"><option value="lks">LKS94 (X, Y)</option><option value="wgs">WGS84 (platuma, ilguma)</option></select></label>
+    <label><span id="targetXLabel">X · šiaurė, m</span><input id="targetX" type="text" inputmode="decimal" autocomplete="off" placeholder="6125330,97" required></label>
+    <label><span id="targetYLabel">Y · rytai, m</span><input id="targetY" type="text" inputmode="decimal" autocomplete="off" placeholder="549904,73" required></label>
+   </div>
+   <div class="actions"><button type="submit">Rodyti tašką</button><button id="clearTarget" type="button" class="subtle" hidden>Pašalinti tašką</button></div>
+  </form>
+  <p id="targetStatus" class="hint" role="status">Įvesk LKS94 X ir Y koordinates.</p>
+  <div class="target-values"><div><span class="label">Atstumas iki taško</span><strong id="targetDistance">–</strong></div><div><span class="label">Kryptis į tašką</span><strong id="targetBearing">–</strong></div></div>
+  <p class="hint">WGS84 platuma ir ilguma perskaičiuojamos į LKS94. Atstumas ir kampas skaičiuojami LKS94 plokštumoje pagal telefono vietą. 0° – tinklo šiaurė; tikslumą riboja telefono GPS.</p>
+ </details>
+ <details class="card points-section">
+  <summary>Taškai iš failo</summary>
+  <div class="options"><label class="file-field">Taškų failas (TXT arba CSV)<span class="file-picker"><span class="file-button">Pasirinkti failą</span><span class="file-name" data-file-name="pointsFile">Failas nepasirinktas</span></span><input id="pointsFile" class="file-input" type="file" accept=".txt,.csv,text/plain,text/csv"></label></div>
+  <label class="point-toggle"><input id="showPointNumbers" type="checkbox" checked> Rodyti taškų numerius</label>
+  <p id="pointsStatus" class="hint" role="status">Įkelk LKS94 taškus: numeris, X (šiaurė), Y (rytai), aukštis, pavadinimas (nebūtinas).</p>
+  <button id="clearPoints" type="button" class="subtle" hidden>Pašalinti taškus</button>
+  <div id="selectedPoint" class="selected-point" hidden>
+   <strong id="selectedPointName">–</strong><span id="selectedPointCoords" class="hint"></span>
+   <div class="target-values"><div><span class="label">Atstumas iki pasirinkto taško</span><strong id="selectedPointDistance">–</strong></div></div>
+   <div class="actions"><button id="routeToPoint" type="button">Rodyti privažiavimą</button><button id="clearRoute" type="button" class="subtle" hidden>Pašalinti maršrutą</button></div>
+   <p id="routeStatus" class="hint" role="status">Maršrutas skaičiuojamas pagal kelius, kai jo paprašai. Tam reikia interneto.</p>
+  </div>
+  <p class="hint">Kelių maršrutas: <a href="https://routing.openstreetmap.de/about.html" target="_blank" rel="noopener">OSRM / FOSSGIS</a> ir <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noopener">OpenStreetMap duomenys</a>. Maršrutas gali baigtis ties artimiausiu privažiuojamu keliu.</p>
+ </details>
+ <details class="card boundary-section">
+  <summary>Objekto riba arba linija</summary>
+  <div class="options">
+   <label class="file-field">Ribos failas (DWG, DXF, KML arba KMZ)<span class="file-picker"><span class="file-button">Pasirinkti failą</span><span class="file-name" data-file-name="boundaryFile">Failas nepasirinktas</span></span><input id="boundaryFile" class="file-input" type="file" accept=".dwg,.dxf,.kml,.kmz,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz"></label>
+   <label>CAD brėžinio koordinatės<select id="boundarySystem"><option value="lks">LKS94 (X rytai, Y šiaurė)</option><option value="wgs">WGS84 (X ilguma, Y platuma)</option></select></label>
+   <label id="boundaryLayerLabel" hidden>CAD sluoksnis<select id="boundaryLayer"></select></label>
+  </div>
+  <label class="point-toggle"><input id="showBoundary" type="checkbox" checked> Rodyti ribą žemėlapyje</label>
+  <p id="boundaryStatus" class="hint" role="status">Įkelk ribą arba liniją. KML / KMZ turi WGS84 koordinates; CAD failams pasirink brėžinio koordinačių sistemą.</p>
+  <button id="clearBoundary" type="button" class="subtle" hidden>Pašalinti ribą</button>
+  <p class="hint">Rodomos DWG / DXF modelio erdvės LINE, POLYLINE, ARC ir CIRCLE linijos. Jei brėžinys turi kelis sluoksnius, pasirink norimą. „Civil 3D“ objektus, kurių ribų nesimato, pirmiausia eksportuok kaip paprastas CAD linijas. Naršyklėje DWG skaitytuvui atsisiųsti reikia interneto; APK skaitytuvas supakuotas.</p>
+ </details>
+ <details class="card alignment">
+  <summary>Kelio ašis</summary>
+  <div class="options"><label class="file-field">Ašies failas (LandXML, GeoJSON, GPX, CSV)<span class="file-picker"><span class="file-button">Pasirinkti failą</span><span class="file-name" data-file-name="alignmentFile">Failas nepasirinktas</span></span><input id="alignmentFile" class="file-input" type="file" accept=".xml,.geojson,.json,.gpx,.csv,text/xml,application/xml"></label>
+   <label id="alignmentChoiceLabel" hidden>Ašis XML faile<select id="alignmentChoice"></select></label>
+   <label>Pradinis piketas, m<input id="stationStart" type="number" step="1" min="-1000000" max="1000000" value="0" inputmode="decimal"></label>
+   <label>Piketo formatas<select id="stationFormat"><option value="100">0+00</option><option value="1000">0+000</option></select></label>
+  </div>
+  <p id="alignmentStatus" class="hint">Įkelk Civil 3D LandXML ašį (LKS94 arba WGS84). Tinka ir WGS84 GeoJSON, GPX bei CSV. Failas saugomas tik šiame įrenginyje.</p>
+  <button id="clearAlignment" type="button" class="subtle" hidden>Pašalinti ašį</button>
+ </details>
+ <div class="actions location-actions"><button id="start" type="button">Rodyti vietą</button><button id="stop" type="button" class="subtle" disabled>Sustabdyti</button></div>
+ <p class="hint">Piketažas rodomas 1 m žingsniu. Atstumas iki ašies, kai jis mažesnis nei 15 m, rodomas 0,01 m žingsniu; toliau – 1 m žingsniu. LKS94 skaičiuojamos iš telefono WGS84 vietos; rodomi skaitmenys po kablelio nereiškia tokio GPS tikslumo. Ašis ir koordinatės lieka šiame įrenginyje, kol pats nepasirenki jų bendrinti. Žemėlapio fonui reikia interneto.</p>
+ <p class="hint privacy-link"><a href="privacy.html">Privatumo informacija</a></p>
+</main>
+<script src="vendor/leaflet/leaflet.js"></script><script src="vendor/jszip/jszip.min.js"></script><script src="vendor/dxf-parser/dxf-parser.js"></script><script src="alignment.js?v=5"></script><script src="points.js?v=1"></script><script src="label-layout.js?v=1"></script><script src="boundary.js?v=1"></script><script src="app.js?v=20"></script><script src="i18n.js?v=3"></script>
+</body></html>
