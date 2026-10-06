@@ -124,8 +124,8 @@ const translations = {
     "LOCATION APP · DEMO"
   ],
   "locationText": [
-    "Vieta žemėlapyje, apytikslis adresas ir telefono duomenys. Pasirinkus galima gyvai bendrinti vietą su kitu žmogumi iki išjungimo.",
-    "Your location on a map, an approximate address and phone data. Optional live location sharing with another person stays active until you turn it off."
+    "Vieta žemėlapyje, gyvas bendrinimas ir judėjimo kryptimi orientuojamas žemėlapis su horizontaliais užrašais. 7 kalbos su vėliavomis ir pasirenkamas Lietuvos ORT10LT ortofoto sluoksnis.",
+    "Live location sharing and a map oriented in your direction of travel with horizontal labels. Seven languages with flags and an optional Lithuanian ORT10LT orthophoto layer."
   ],
   "surveyApp": [
     "GEODEZINĖ PROGRAMĖLĖ · DEMO",
