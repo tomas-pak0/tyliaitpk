@@ -124,8 +124,8 @@ const translations = {
     "LOCATION APP · DEMO"
   ],
   "locationText": [
-    "Vieta žemėlapyje, gyvas bendrinimas ir judėjimo kryptimi orientuojamas žemėlapis su horizontaliais užrašais. 7 kalbos su vėliavomis ir pasirenkamas Lietuvos ORT10LT ortofoto sluoksnis.",
-    "Live location sharing and a map oriented in your direction of travel with horizontal labels. Seven languages with flags and an optional Lithuanian ORT10LT orthophoto layer."
+    "Vieta žemėlapyje, gyvas bendrinimas ir judėjimo kryptimi orientuojamas žemėlapis su horizontaliais užrašais. 9 kalbos su vėliavomis, lietuviški administraciniai pavadinimai ir pasirenkamas pasaulinis foto žemėlapis.",
+    "Live location sharing and a map oriented in your direction of travel with horizontal labels. Nine languages with flags, Lithuanian administrative names and an optional worldwide photo map."
   ],
   "surveyApp": [
     "GEODEZINĖ PROGRAMĖLĖ · DEMO",
