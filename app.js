@@ -135,14 +135,8 @@ const translations = {
     "Vieta žemėlapyje, Civil 3D ašies importas, piketažas ir atstumas iki ašies.",
     "Your location on a map, Civil 3D alignment import, chainage and distance to the alignment."
   ],
-  "mapApp": [
-    "ŽEMĖLAPIO PROGRAMĖLĖ · DEMO",
-    "MAP APP · DEMO"
-  ],
-  "etnText": [
-    "Tyrinėk aplinką: judant atsiveria rūku uždengtas žemėlapis, o atradimus galima eksportuoti PDF ar TXT. Demonstracijoje gyvenviečių duomenys apima Lietuvą.",
-    "Explore your surroundings: movement reveals a fog-covered map, and discoveries can be exported as PDF or TXT. Settlement data in the demo covers Lithuania."
-  ],
+  "mapApp": ["TYRINĖJIMO ANDROID PROGRAMĖLĖ", "ANDROID EXPLORATION APP"],
+  "etnText": ["ETN paverčia pasivaikščiojimus ir keliones atradimais: judant atsiveria rūku uždengtas žemėlapis, skaičiuojamos atrastos šalys, gyvenvietės ir administraciniai centrai. Atradimus eksportuok į PDF, TXT ar CSV. Dešimt kalbų, įskaitant rusų; istorija saugoma telefone, o įjungtas GPS tyrinėjimas tęsiasi fone.", "ETN turns walks and trips into discoveries: movement reveals a fog-covered map and tracks explored countries, settlements and administrative centers. Export discoveries as PDF, TXT or CSV. Ten languages, including Russian; history stays on your phone and active GPS exploration continues in the background."],
   "openDemo": [
     "Atidaryti demonstraciją ↗",
     "Open demo ↗"
