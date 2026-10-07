@@ -92,8 +92,8 @@ const translations = {
     "03 / PROJECTS"
   ],
   "projectsIntro": [
-    "Susipažinkite su programėlėmis ir išbandykite prieinamas demonstracijas.",
-    "Explore the apps and try the available demos."
+    "Susipažinkite su programėlėmis, jų funkcijomis ir ekrano vaizdais.",
+    "Explore the apps, their features and screenshots."
   ],
   "webApp": [
     "WEB PROGRAMĖLĖ · DEMO",
@@ -108,8 +108,8 @@ const translations = {
     "MOBILE APP · DEMO"
   ],
   "smileText": [
-    "Dantų valymo laikmatis ir kasdienio įpročio sekimas telefone.",
-    "A toothbrushing timer and daily habit tracker for your phone."
+    "Dviejų minučių dantų valymo laikmatis su keturiais 30 sekundžių etapais, garso ir vibracijos signalais. Sek ryto ir vakaro valymus, peržiūrėk savaitės statistiką bei mėnesio ataskaitas ir eksportuok duomenis. Veikia be interneto, o įrašai lieka tavo įrenginyje.",
+    "A two-minute toothbrushing timer with four 30-second stages, sound and vibration signals. Track morning and evening brushing, view weekly statistics and monthly reports, and export your records. Works offline, with your records stored on your device."
   ],
   "financeApp": [
     "FINANSŲ ĮRANKIS · DEMO",
@@ -167,6 +167,7 @@ const translations = {
   ]
 };
 
+translations.smileApp=["DANTŲ VALYMO ANDROID PROGRAMĖLĖ","ANDROID TOOTHBRUSHING APP"];
 translations.axisDetails=["Apie programėlę ir ekrano vaizdai ↗","App details and screenshots ↗"];
 const year = document.querySelector("#year");
 if (year) year.textContent = new Date().getFullYear();
