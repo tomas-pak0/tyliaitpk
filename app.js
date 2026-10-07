@@ -92,8 +92,8 @@ const translations = {
     "03 / PROJECTS"
   ],
   "projectsIntro": [
-    "Atidarykite projektų demonstracines versijas tiesiai naršyklėje.",
-    "Try the project demos directly in your browser."
+    "Susipažinkite su programėlėmis ir išbandykite prieinamas demonstracijas.",
+    "Explore the apps and try the available demos."
   ],
   "webApp": [
     "WEB PROGRAMĖLĖ · DEMO",
@@ -128,8 +128,8 @@ const translations = {
     "Live location sharing and a map oriented in your direction of travel with horizontal labels. Ten languages with flags, Lithuanian administrative names and an optional worldwide photo map."
   ],
   "surveyApp": [
-    "GEODEZINĖ PROGRAMĖLĖ · DEMO",
-    "SURVEYING APP · DEMO"
+    "GEODEZINĖ ANDROID PROGRAMĖLĖ",
+    "ANDROID SURVEYING APP"
   ],
   "axisText": [
     "Vieta žemėlapyje, Civil 3D ašies importas, piketažas ir atstumas iki ašies.",
@@ -173,6 +173,7 @@ const translations = {
   ]
 };
 
+translations.axisDetails=["Apie programėlę ir ekrano vaizdai ↗","App details and screenshots ↗"];
 const year = document.querySelector("#year");
 if (year) year.textContent = new Date().getFullYear();
 
@@ -211,3 +212,4 @@ let savedLanguage = "lt";
 try { savedLanguage = localStorage.getItem("tyliaitpk-language") || "lt"; } catch {}
 const requestedLanguage = new URLSearchParams(location.search).get("lang");
 setLanguage(requestedLanguage === "en" || requestedLanguage === "lt" ? requestedLanguage : savedLanguage);
+
