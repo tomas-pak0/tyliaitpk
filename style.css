@@ -605,3 +605,10 @@ section[id] { scroll-margin-top: 90px; }
 .gallery-hint { color: var(--muted); font-size: .8rem; }
 @media (max-width: 760px) { .project[id] { scroll-margin-top: 124px; } }
 @media (max-width: 480px) { .gallery-dialog { padding: 10px; } .gallery-stage { grid-template-columns: 40px minmax(0,1fr) 40px; gap: 6px; } .gallery-dialog button { width: 40px; height: 44px; } }
+
+/* Russian hero copy stays on two lines across screen sizes. */
+html[lang="ru"] .hero h1 { font-size: clamp(1.4rem, 5.5vw, 4.5rem); }
+html[lang="ru"] .hero h1 span { display: inline-block; white-space: nowrap; }
+@media (max-width: 760px) {
+  html[lang="ru"] .hero h1 { font-size: clamp(1.2rem, 7vw, 3.8rem); }
+}

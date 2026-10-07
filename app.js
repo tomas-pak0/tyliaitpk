@@ -20,7 +20,7 @@ const translations = {
     "Contact"
   ],
   "eyebrow": [
-    "WEB DEVELOPMENT · DIGITAL SOLUTIONS",
+    "INTERNETO SVETAINIŲ KŪRIMAS · SKAITMENINIAI SPRENDIMAI",
     "WEB DEVELOPMENT · DIGITAL SOLUTIONS"
   ],
   "heroLead": [
