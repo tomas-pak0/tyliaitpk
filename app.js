@@ -120,12 +120,12 @@ const translations = {
     "An interactive overview of income and expenses using sample data."
   ],
   "locationApp": [
-    "VIETOS PROGRAMĖLĖ · DEMO",
-    "LOCATION APP · DEMO"
+    "VIETOS ANDROID PROGRAMĖLĖ",
+    "ANDROID LOCATION APP"
   ],
   "locationText": [
-    "Vieta žemėlapyje, gyvas bendrinimas ir judėjimo kryptimi orientuojamas žemėlapis su horizontaliais užrašais. 10 kalbų su vėliavomis, lietuviški administraciniai pavadinimai ir pasirenkamas pasaulinis foto žemėlapis.",
-    "Live location sharing and a map oriented in your direction of travel with horizontal labels. Ten languages with flags, Lithuanian administrative names and an optional worldwide photo map."
+    "Tavo vieta, greitis ir kryptis žemėlapyje, apytikslis adresas bei oras. Bendrink vietą su pasirinktu žmogumi, rinkis įprastą ar foto žemėlapį. 10 kalbų su vėliavomis.",
+    "Your location, speed and heading on a map, with an approximate address and weather. Share your location with someone you choose and switch between standard and photo maps. Ten languages with flags."
   ],
   "surveyApp": [
     "GEODEZINĖ ANDROID PROGRAMĖLĖ",
