@@ -124,8 +124,8 @@ const translations = {
     "ANDROID LOCATION APP"
   ],
   "locationText": [
-    "Tavo vieta, greitis ir kryptis žemėlapyje, apytikslis adresas bei oras. Bendrink vietą su pasirinktu žmogumi, rinkis įprastą ar foto žemėlapį. 10 kalbų su vėliavomis.",
-    "Your location, speed and heading on a map, with an approximate address and weather. Share your location with someone you choose and switch between standard and photo maps. Ten languages with flags."
+    "Tavo vieta, greitis, kryptis, apytikslis adresas ir oras. Įjungiama kometos uodega, išsaugoti taškai ir maršrutai keliais. Gyvas vietos bendrinimas fone, pagalbos mygtukas ir 10 kalbų.",
+    "Your location, speed, heading, approximate address and weather. A switchable comet trail, saved places and driving routes. Live location sharing in the background, a help button and ten languages."
   ],
   "surveyApp": [
     "GEODEZINĖ ANDROID PROGRAMĖLĖ",
@@ -205,7 +205,7 @@ const russianTranslations = {
   "financeApp": "ФИНАНСОВЫЙ ИНСТРУМЕНТ · ДЕМО",
   "financeText": "Интерактивный обзор доходов и расходов на примере демонстрационных данных.",
   "locationApp": "ANDROID-ПРИЛОЖЕНИЕ ДЛЯ ГЕОЛОКАЦИИ",
-  "locationText": "Ваше местоположение, скорость и направление на карте, приблизительный адрес и погода. Делитесь местоположением с выбранным человеком, выбирайте обычную карту или фотокарту. Десять языков с флагами.",
+  "locationText": "Местоположение, скорость, направление, приблизительный адрес и погода. Отключаемый след кометы, сохранённые точки и маршруты по дорогам. Передача местоположения в фоне, кнопка помощи и десять языков.",
   "surveyApp": "ГЕОДЕЗИЧЕСКОЕ ANDROID-ПРИЛОЖЕНИЕ",
   "axisText": "Местоположение на карте, импорт оси из Civil 3D, пикетаж и расстояние до оси.",
   "mapApp": "ANDROID-ПРИЛОЖЕНИЕ ДЛЯ ИССЛЕДОВАНИЯ МИРА",
