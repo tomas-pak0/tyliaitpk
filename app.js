@@ -224,6 +224,9 @@ translations.galleryClose = ["Uždaryti", "Close", "Закрыть"];
 translations.galleryPrevious = ["Ankstesnė nuotrauka", "Previous image", "Предыдущее фото"];
 translations.galleryNext = ["Kita nuotrauka", "Next image", "Следующее фото"];
 translations.galleryHint = ["Slinkite į kairę arba dešinę · klaviatūroje ← →", "Swipe left or right · keyboard ← →", "Листайте влево или вправо · клавиши ← →"];
+translations.linkorbiType = ["WEB PROJEKTAS · KURIAMA", "WEB PROJECT · IN DEVELOPMENT", "ВЕБ-ПРОЕКТ · В РАЗРАБОТКЕ"];
+translations.linkorbiText = ["Žmonių ryšių kosmosas. Projektas kuriamas; bandomoji versija pasiekiama tik su prieigos kodu.", "A universe of human connections. The project is in development; preview access requires an access code.", "Вселенная человеческих связей. Проект в разработке; для доступа к предварительной версии нужен код."];
+translations.linkorbiOpen = ["Atverti privačią peržiūrą ↗", "Open private preview ↗", "Открыть закрытый просмотр ↗"];
 const supportedLanguages = ["lt", "en", "ru"];
 const year = document.querySelector("#year");
 if (year) year.textContent = new Date().getFullYear();
@@ -360,3 +363,4 @@ galleryStage.addEventListener("touchend", event => {
 }, {passive: true});
 galleryStage.addEventListener("touchcancel", () => { touchStart = null; }, {passive: true});
 setLanguage(initialLanguage);
+
